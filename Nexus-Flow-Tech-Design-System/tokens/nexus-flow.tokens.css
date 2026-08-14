@@ -1,0 +1,49 @@
+:root {
+  --nft-color-navy: #052D72;
+  --nft-color-blue: #0757C9;
+  --nft-color-electric-blue: #24C9FF;
+  --nft-color-violet: #7726D5;
+  --nft-color-magenta: #E22987;
+  --nft-color-orange: #F4510B;
+  --nft-color-amber: #FF9A0B;
+  --nft-color-gold: #ECAF24;
+  --nft-color-white: #FFFFFF;
+  --nft-color-surface: #F6F8FC;
+  --nft-color-border: #D9DDE3;
+  --nft-color-graphite: #10131B;
+
+  --nft-gradient-flow: linear-gradient(90deg, #24C9FF 0%, #0757C9 18%, #7726D5 45%, #E22987 58%, #F4510B 79%, #FF9A0B 100%);
+
+  --nft-font-display: Inter, ui-sans-serif, system-ui, sans-serif;
+  --nft-font-body: Inter, ui-sans-serif, system-ui, sans-serif;
+  --nft-font-mono: JetBrains Mono, ui-monospace, monospace;
+
+  --nft-font-size-xs: 12px;
+  --nft-font-size-sm: 14px;
+  --nft-font-size-md: 16px;
+  --nft-font-size-lg: 18px;
+  --nft-font-size-xl: 24px;
+  --nft-font-size-2xl: 32px;
+  --nft-font-size-3xl: 48px;
+  --nft-font-size-4xl: 64px;
+
+  --nft-space-2xs: 4px;
+  --nft-space-xs: 8px;
+  --nft-space-sm: 12px;
+  --nft-space-md: 16px;
+  --nft-space-lg: 24px;
+  --nft-space-xl: 32px;
+  --nft-space-2xl: 48px;
+  --nft-space-3xl: 64px;
+  --nft-space-4xl: 80px;
+
+  --nft-radius-sm: 8px;
+  --nft-radius-md: 12px;
+  --nft-radius-lg: 20px;
+  --nft-radius-pill: 9999px;
+
+  --nft-shadow-sm: 0 4px 18px rgba(5,45,114,0.08);
+  --nft-shadow-md: 0 12px 30px rgba(5,45,114,0.12);
+  --nft-shadow-glow-blue: 0 0 32px rgba(36,201,255,0.30);
+  --nft-shadow-glow-orange: 0 0 32px rgba(244,81,11,0.30);
+}

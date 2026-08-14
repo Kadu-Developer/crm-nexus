@@ -1,0 +1,25 @@
+{
+  "assets": [
+    "assets/logos/logo-full-horizontal-alt.png",
+    "assets/logos/logo-full-horizontal.png",
+    "assets/logos/logo-full-vertical.png",
+    "assets/logos/logo-shield-symbol.png",
+    "assets/logos/logo-wave-element.png",
+    "assets/logos/logo-wordmark-block.png"
+  ],
+  "docs": [
+    "docs/DESIGN-SYSTEM.md"
+  ],
+  "tokens": [
+    "tokens/nexus-flow.tokens.css",
+    "tokens/nexus-flow.tokens.json",
+    "tokens/nexus-flow.tokens.ts",
+    "tokens/tailwind.preset.js"
+  ],
+  "components": [
+    "components/GlowButton.config.js",
+    "components/SectionHeader.config.js",
+    "components/react/BrandLogo.tsx",
+    "components/react/HeroLightningSection.tsx"
+  ]
+}

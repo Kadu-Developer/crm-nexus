@@ -1,0 +1,42 @@
+{
+  "name": "@nexus-flow-tech/design-system",
+  "version": "1.0.0",
+  "description": "Nexus Flow Tech Design System - Tokens, Components, and Brand Guidelines",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "tokens",
+    "components",
+    "brand",
+    "assets"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0"
+  },
+  "keywords": [
+    "design-system",
+    "tokens",
+    "react",
+    "brand",
+    "nexus-flow-tech"
+  ],
+  "author": "Nexus Flow Tech",
+  "license": "MIT",
+  "sideEffects": false
+}

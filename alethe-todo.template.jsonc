@@ -1,0 +1,22 @@
+// Alethe Todo template
+// Copy this file to `todos.jsonc` when you want to iterate on an external Todo file.
+// For now, the app stores Todo items in its local profile; this template documents
+// the structure expected by the importer/sync layer.
+{
+  // Schema version for future migrations.
+  "version": 1,
+
+  // Global personal task list. Order in this array is the visible order.
+  "todos": [
+    {
+      // Stable id. Any unique string is accepted.
+      "id": "task-example-1",
+
+      // Text shown in the Todo sidebar.
+      "title": "Example task",
+
+      // false = Active, true = Completed.
+      "completed": false
+    }
+  ]
+}

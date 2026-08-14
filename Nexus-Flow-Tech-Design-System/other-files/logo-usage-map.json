@@ -1,0 +1,34 @@
+{
+  "full-horizontal": [
+    "header",
+    "hero",
+    "footer",
+    "apresentações"
+  ],
+  "full-vertical": [
+    "posts",
+    "stories",
+    "capa vertical",
+    "apresentações verticais"
+  ],
+  "full-horizontal-alt": [
+    "variação secundária",
+    "materiais promocionais"
+  ],
+  "shield": [
+    "favicon",
+    "avatar",
+    "app icon",
+    "selos"
+  ],
+  "wordmark": [
+    "assinaturas",
+    "navbars",
+    "rodapé"
+  ],
+  "wave": [
+    "divisórias",
+    "hero background",
+    "deco sections"
+  ]
+}

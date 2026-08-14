@@ -1,0 +1,32 @@
+{
+  "todos": [
+    {
+      "completed": true,
+      "id": "M9vkWRk3mE10EGVFqS8bu",
+      "projectId": "D1Atj_iQrKY-1s4lW6bzY",
+      "tags": [
+        "review"
+      ],
+      "title": "Review active workspace"
+    },
+    {
+      "completed": true,
+      "id": "9JSmWPbYfeqyMA-PKtMy9",
+      "projectId": "D1Atj_iQrKY-1s4lW6bzY",
+      "tags": [
+        "docs"
+      ],
+      "title": "Open project README"
+    },
+    {
+      "completed": true,
+      "id": "AJx7SKG7xa26PkIl3bhfM",
+      "projectId": "D1Atj_iQrKY-1s4lW6bzY",
+      "tags": [
+        "plan"
+      ],
+      "title": "Plan next implementation step"
+    }
+  ],
+  "version": 1
+}

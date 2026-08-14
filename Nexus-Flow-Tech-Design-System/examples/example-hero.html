@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nexus Flow Tech - Example</title>
+  <link rel="stylesheet" href="../tokens/nexus-flow.tokens.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--nft-font-body);
+      color: var(--nft-color-graphite);
+      background: #fff;
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 80px 24px;
+      display: grid;
+      gap: 24px;
+    }
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--nft-color-blue);
+      font-family: var(--nft-font-mono);
+    }
+    h1 {
+      font-size: clamp(40px, 7vw, 64px);
+      line-height: 1.05;
+      margin: 0;
+      color: var(--nft-color-navy);
+    }
+    p {
+      font-size: 18px;
+      line-height: 1.6;
+      max-width: 760px;
+      margin: 0;
+    }
+    .logo {
+      max-width: 760px;
+      width: 100%;
+      height: auto;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      border: 1px solid var(--nft-color-border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--nft-shadow-sm);
+      background: var(--nft-color-white);
+    }
+    .badge {
+      display: inline-block;
+      font-family: var(--nft-font-mono);
+      font-size: 12px;
+      color: var(--nft-color-white);
+      background: var(--nft-gradient-flow);
+      border-radius: var(--nft-radius-pill);
+      padding: 8px 12px;
+    }
+  </style>
+</head>
+<body>
+  <section class="wrap">
+    <div class="eyebrow">Nexus Flow Tech</div>
+    <h1>Dados em fluxo.<br>Decisões em movimento.</h1>
+    <p>Exemplo de uso dos tokens e da identidade visual em uma seção hero do design system.</p>
+    <img class="logo" src="../assets/logos/logo-full-horizontal.png" alt="Nexus Flow Tech">
+    <div class="cards">
+      <article class="card">
+        <span class="badge">Fluxo</span>
+        <h3>Dados conectados</h3>
+        <p>Componentes com linguagem limpa, clara e tecnológica.</p>
+      </article>
+      <article class="card">
+        <span class="badge">Decisão</span>
+        <h3>Alta legibilidade</h3>
+        <p>Tipografia e cores com foco em contraste e hierarquia.</p>
+      </article>
+      <article class="card">
+        <span class="badge">Movimento</span>
+        <h3>Energia visual</h3>
+        <p>Uso do gradiente de fluxo e da onda da marca como recurso visual.</p>
+      </article>
+    </div>
+  </section>
+</body>
+</html>

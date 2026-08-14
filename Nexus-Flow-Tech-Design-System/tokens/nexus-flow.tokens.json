@@ -1,0 +1,190 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "brand": {
+    "name": "Nexus Flow Tech",
+    "slogan": "DADOS EM FLUXO. DECISÕES EM MOVIMENTO.",
+    "version": "1.0.0"
+  },
+  "color": {
+    "primary": {
+      "navy": {
+        "value": "#052D72"
+      },
+      "blue": {
+        "value": "#0757C9"
+      },
+      "electricBlue": {
+        "value": "#24C9FF"
+      },
+      "violet": {
+        "value": "#7726D5"
+      },
+      "magenta": {
+        "value": "#E22987"
+      },
+      "orange": {
+        "value": "#F4510B"
+      },
+      "amber": {
+        "value": "#FF9A0B"
+      },
+      "gold": {
+        "value": "#ECAF24"
+      }
+    },
+    "neutral": {
+      "white": {
+        "value": "#FFFFFF"
+      },
+      "surface": {
+        "value": "#F6F8FC"
+      },
+      "border": {
+        "value": "#D9DDE3"
+      },
+      "graphite": {
+        "value": "#10131B"
+      },
+      "black": {
+        "value": "#000000"
+      }
+    },
+    "gradient": {
+      "flow": {
+        "value": "linear-gradient(90deg, #24C9FF 0%, #0757C9 18%, #7726D5 45%, #E22987 58%, #F4510B 79%, #FF9A0B 100%)"
+      }
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "display": {
+        "value": "Inter, ui-sans-serif, system-ui, sans-serif"
+      },
+      "body": {
+        "value": "Inter, ui-sans-serif, system-ui, sans-serif"
+      },
+      "mono": {
+        "value": "JetBrains Mono, ui-monospace, monospace"
+      }
+    },
+    "fontSize": {
+      "xs": {
+        "value": "12px"
+      },
+      "sm": {
+        "value": "14px"
+      },
+      "md": {
+        "value": "16px"
+      },
+      "lg": {
+        "value": "18px"
+      },
+      "xl": {
+        "value": "24px"
+      },
+      "2xl": {
+        "value": "32px"
+      },
+      "3xl": {
+        "value": "48px"
+      },
+      "4xl": {
+        "value": "64px"
+      }
+    },
+    "fontWeight": {
+      "regular": {
+        "value": "400"
+      },
+      "medium": {
+        "value": "500"
+      },
+      "semibold": {
+        "value": "600"
+      },
+      "bold": {
+        "value": "700"
+      }
+    },
+    "lineHeight": {
+      "tight": {
+        "value": "1.1"
+      },
+      "normal": {
+        "value": "1.5"
+      },
+      "relaxed": {
+        "value": "1.7"
+      }
+    },
+    "letterSpacing": {
+      "tight": {
+        "value": "-0.02em"
+      },
+      "normal": {
+        "value": "0"
+      },
+      "wide": {
+        "value": "0.12em"
+      }
+    }
+  },
+  "spacing": {
+    "2xs": {
+      "value": "4px"
+    },
+    "xs": {
+      "value": "8px"
+    },
+    "sm": {
+      "value": "12px"
+    },
+    "md": {
+      "value": "16px"
+    },
+    "lg": {
+      "value": "24px"
+    },
+    "xl": {
+      "value": "32px"
+    },
+    "2xl": {
+      "value": "48px"
+    },
+    "3xl": {
+      "value": "64px"
+    },
+    "4xl": {
+      "value": "80px"
+    }
+  },
+  "radius": {
+    "sm": {
+      "value": "8px"
+    },
+    "md": {
+      "value": "12px"
+    },
+    "lg": {
+      "value": "20px"
+    },
+    "pill": {
+      "value": "9999px"
+    }
+  },
+  "shadow": {
+    "sm": {
+      "value": "0 4px 18px rgba(5,45,114,0.08)"
+    },
+    "md": {
+      "value": "0 12px 30px rgba(5,45,114,0.12)"
+    },
+    "glowBlue": {
+      "value": "0 0 32px rgba(36,201,255,0.30)"
+    },
+    "glowOrange": {
+      "value": "0 0 32px rgba(244,81,11,0.30)"
+    }
+  }
+}
