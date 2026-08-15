@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 import { Opportunity, PipelineStage } from '@/types/crm';
 import { STAGES } from '@/lib/mock-data';
 import { formatCurrency, formatDateTime, isActionOverdue, isActionToday } from '@/lib/utils';
@@ -12,8 +12,6 @@ import {
   Building2,
   Flame,
   GripVertical,
-  ArrowRight,
-  TrendingUp,
 } from 'lucide-react';
 
 interface KanbanBoardProps {
@@ -42,6 +40,30 @@ export function KanbanBoard({
 
     onMoveStage(draggableId, destination.droppableId as PipelineStage);
   };
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, opp: Opportunity, stageId: PipelineStage) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelectOpportunity(opp);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const currentStageIndex = STAGES.findIndex((s) => s.id === stageId);
+        if (currentStageIndex < STAGES.length - 1) {
+          const nextStage = STAGES[currentStageIndex + 1].id;
+          onMoveStage(opp.id, nextStage);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const currentStageIndex = STAGES.findIndex((s) => s.id === stageId);
+        if (currentStageIndex > 0) {
+          const prevStage = STAGES[currentStageIndex - 1].id;
+          onMoveStage(opp.id, prevStage);
+        }
+      }
+    },
+    [onSelectOpportunity, onMoveStage]
+  );
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -109,7 +131,10 @@ export function KanbanBoard({
                               ref={providedDrag.innerRef}
                               {...providedDrag.draggableProps}
                               onClick={() => onSelectOpportunity(opp)}
-                              className={`p-3.5 bg-white dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/60 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group relative ${
+                              onKeyDown={(e) => handleKeyDown(e, opp, stage.id as PipelineStage)}
+                              tabIndex={0}
+                              aria-label={`Oportunidade: ${opp.tradeName || opp.companyName}. Próxima ação: ${opp.nextActionDescription}. ${opp.activities.length} interações.`}
+                              className={`p-3.5 bg-white dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/60 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 ${
                                 snapshotDrag.isDragging
                                   ? 'shadow-2xl ring-2 ring-blue-500 rotate-1 scale-105 z-50 bg-white dark:bg-slate-800'
                                   : ''

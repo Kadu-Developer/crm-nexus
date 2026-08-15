@@ -1,8 +1,8 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Opportunity, PipelineStage, Activity, Qualification } from '@/types/crm';
-import { INITIAL_OPPORTUNITIES, STAGES, USERS, calculateOpportunityScore } from '@/lib/mock-data';
+import { Opportunity, PipelineStage, Activity } from '@/types/crm';
+import { INITIAL_OPPORTUNITIES, STAGES } from '@/lib/mock-data';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { QuickCaptureModal } from '@/components/quick-capture/QuickCaptureModal';
 import { LeadDetailModal } from '@/components/lead-modal/LeadDetailModal';
@@ -18,8 +18,6 @@ import {
   Kanban,
   CheckSquare,
   Plus,
-  Flame,
-  Filter,
   Users,
   Search,
   Moon,
@@ -33,7 +31,7 @@ import {
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
-  const { profile, isLoading, signOut, switchMockUser } = useAuth();
+  const { profile, isLoading, signOut } = useAuth();
   const router = useRouter();
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>(INITIAL_OPPORTUNITIES);
@@ -41,9 +39,9 @@ function AppContent() {
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks'>('kanban');
-  const [consultantFilter, setConsultantFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
+  const [consultantFilter, setConsultantFilter] = useState<string>('all');
 
   // Redirecionamento para Login se não estiver autenticado
   useEffect(() => {
@@ -52,28 +50,33 @@ function AppContent() {
     }
   }, [isLoading, profile, router]);
 
-  // Carregar dados iniciais e conectar ao Supabase Realtime
-  const loadPipelineData = async () => {
-    setLoadingData(true);
-    const data = await crmService.getOpportunities();
-    if (data && data.length > 0) {
-      setOpportunities(data);
-    }
-    setLoadingData(false);
-  };
-
   useEffect(() => {
-    if (profile) {
-      loadPipelineData();
+    if (!profile) return;
 
-      const unsubscribe = crmService.subscribeToChanges(() => {
-        loadPipelineData();
-      });
+    let unsubscribe: (() => void) | undefined;
+    let isMounted = true;
 
-      return () => {
-        unsubscribe();
-      };
-    }
+    const fetchData = async () => {
+      setLoadingData(true);
+      const data = await crmService.getOpportunities();
+      if (isMounted && data && data.length > 0) {
+        setOpportunities(data);
+      }
+      if (isMounted) {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+
+    unsubscribe = crmService.subscribeToChanges(() => {
+      fetchData();
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe?.();
+    };
   }, [profile]);
 
   if (isLoading || !profile) {
@@ -93,7 +96,7 @@ function AppContent() {
     const stageDef = STAGES.find((s) => s.id === newStage);
     const newProb = stageDef?.defaultProbability || 10;
 
-    let targetOpp = opportunities.find((o) => o.id === oppId);
+    const targetOpp = opportunities.find((o) => o.id === oppId);
     const newWeighted = ((targetOpp?.proposedValue || targetOpp?.estimatedValue || 0) * newProb) / 100;
 
     setOpportunities((prev) =>
@@ -188,16 +191,8 @@ function AppContent() {
     router.push('/login');
   };
 
-  // RLS Filter: Se for consultor específico (e não CEO), aplicamos a visibilidade RLS padrão
-  const effectiveOpportunities = opportunities.filter((opp) => {
-    if (profile?.role === 'consultant' && consultantFilter === 'all') {
-      return opp.consultantId === profile.id;
-    }
-    return true;
-  });
-
-  // Filtragem de busca global
-  const displayedOpportunities = effectiveOpportunities.filter((opp) => {
+  // Filtragem de busca global (RLS no Supabase já garante que consultores vejam apenas seus leads)
+  const displayedOpportunities = opportunities.filter((opp) => {
     const searchMatch =
       opp.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       opp.tradeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -279,25 +274,21 @@ function AppContent() {
             />
           </div>
 
-          {/* Seletor / Indicador de Usuário */}
+          {/* Indicador de Usuário */}
           <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
             {profile?.role === 'admin_ceo' ? (
               <ShieldCheck className="w-4 h-4 text-amber-500" />
             ) : (
               <Users className="w-3.5 h-3.5 text-blue-500" />
             )}
-            <select
-              value={profile?.id}
-              onChange={(e) => switchMockUser(e.target.value)}
-              className="bg-transparent text-xs text-slate-700 dark:text-slate-300 font-semibold focus:outline-none cursor-pointer pr-1"
-              title="Trocar usuário ativo"
-            >
-              {USERS.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role === 'admin_ceo' ? 'CEO' : 'Consultor'})
-                </option>
-              ))}
-            </select>
+            <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[150px]">
+              {profile?.name}
+            </span>
+            {profile?.role === 'admin_ceo' && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded font-bold">
+                CEO
+              </span>
+            )}
           </div>
 
           {/* Botão de Refresh Supabase */}

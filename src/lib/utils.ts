@@ -37,12 +37,13 @@ export function formatDateTime(dateString: string): string {
 export function isActionOverdue(dateString: string): boolean {
   if (!dateString) return true;
   const target = new Date(dateString).getTime();
-  const now = new Date('2026-08-14T23:59:59Z').getTime(); // Data de hoje no contexto
+  const now = new Date().getTime();
   return target < now;
 }
 
 export function isActionToday(dateString: string): boolean {
   if (!dateString) return false;
   const target = new Date(dateString).toISOString().split('T')[0];
-  return target === '2026-08-14';
+  const today = new Date().toISOString().split('T')[0];
+  return target === today;
 }

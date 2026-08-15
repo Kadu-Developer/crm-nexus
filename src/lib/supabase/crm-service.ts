@@ -10,34 +10,99 @@ function isUUID(str?: string): boolean {
 }
 
 // Helper para converter registro do Supabase para formato Opportunity do frontend
-export function mapSupabaseToOpportunity(row: any): Opportunity {
-  const company = row.company || {};
-  const contacts: Contact[] = (row.contacts || []).map((c: any) => ({
-    id: c.id,
-    companyId: row.company_id || 'comp_1',
-    name: c.name || 'Contato',
-    jobTitle: c.job_title || c.role || 'Executivo',
-    area: c.area || c.department || 'diretoria_clevel',
-    phone: c.phone || '',
-    email: c.email || '',
-    isDecisionMaker: c.is_decision_maker ?? true,
-    decisionInfluence: c.decision_influence || (c.influence_level === 'alta' ? 'alta' : 'media'),
+type SupabaseRow = Record<string, unknown>;
+
+const getString = (obj: SupabaseRow, key: string, fallback = ''): string =>
+  (obj[key] as string) || fallback;
+
+const getNumber = (obj: SupabaseRow, key: string, fallback = 0): number =>
+  Number(obj[key]) || fallback;
+
+const getBool = (obj: SupabaseRow, key: string, fallback = false): boolean =>
+  obj[key] === undefined ? fallback : Boolean(obj[key]);
+
+const toContactArea = (val: string): Contact['area'] => {
+  const validAreas = ['diretoria_clevel', 'comercial', 'operacoes', 'ti_sistemas', 'financeiro', 'rh', 'outro'];
+  return validAreas.includes(val) ? val as Contact['area'] : 'diretoria_clevel';
+};
+
+const toBudgetStatus = (val: string): Qualification['hasBudget'] => {
+  const valid = ['sim_confirmado', 'verba_em_definicao', 'sem_orcamento', 'desconhecido'];
+  return valid.includes(val) ? val as Qualification['hasBudget'] : 'verba_em_definicao';
+};
+
+const toActivityType = (val: string): Activity['activityType'] => {
+  const valid = ['linkedin', 'email', 'reuniao', 'ligacao', 'whatsapp', 'visita_presencial'];
+  return valid.includes(val) ? val as Activity['activityType'] : 'reuniao';
+};
+
+const toSegment = (val: string): Segment => {
+  const valid = ['industria', 'varejo_ecom', 'servicos', 'tecnologia', 'saude', 'logistica', 'construcao', 'outro'];
+  return valid.includes(val) ? val as Segment : 'servicos';
+};
+
+const toCompanySize = (val: string): Opportunity['companySize'] => {
+  const valid = ['micro_1_9', 'pequena_10_49', 'media_50_199', 'grande_200_mais'];
+  return valid.includes(val) ? val as Opportunity['companySize'] : 'media_50_199';
+};
+
+const toRevenueTier = (val: string): RevenueTier => {
+  const valid = ['ate_360k', '360k_a_4_8m', '4_8m_a_15m', '15m_a_50m', 'acima_50m'];
+  return valid.includes(val) ? val as RevenueTier : '15m_a_50m';
+};
+
+const toLeadSource = (val: string): Opportunity['leadSource'] => {
+  const valid = ['linkedin', 'instagram', 'indicacao', 'evento', 'outbound', 'parceiro', 'site', 'pre_diagnostico', 'outro'];
+  return valid.includes(val) ? val as Opportunity['leadSource'] : 'outbound';
+};
+
+const toPipelineStage = (val: string): PipelineStage => {
+  const valid = [
+    'lead_identificado', 'primeiro_contato', 'contato_realizado', 'pre_diag_agendado',
+    'pre_diag_realizado', 'qualificado', 'diag_proposto', 'diag_contratado', 'diag_realizado',
+    'solucao_identificada', 'proposta_enviada', 'negociacao', 'fechado_ganho', 'fechado_perdido'
+  ];
+  return valid.includes(val) ? val as PipelineStage : 'lead_identificado';
+};
+
+export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
+  const company = (row.company as SupabaseRow) || {};
+  const contacts: Contact[] = ((row.contacts as SupabaseRow[]) || []).map((c: SupabaseRow) => ({
+    id: getString(c, 'id'),
+    companyId: getString(row, 'company_id', 'comp_1'),
+    name: getString(c, 'name', 'Contato'),
+    jobTitle: getString(c, 'job_title') || getString(c, 'role', 'Executivo'),
+    area: toContactArea(getString(c, 'area') || getString(c, 'department', 'diretoria_clevel')),
+    phone: getString(c, 'phone'),
+    email: getString(c, 'email'),
+    isDecisionMaker: getBool(c, 'is_decision_maker', true),
+    decisionInfluence: (() => {
+        const inf = getString(c, 'decision_influence') || getString(c, 'influence_level');
+        const validInfluence = ['baixa', 'media', 'alta'];
+        return validInfluence.includes(inf) ? inf as DecisionInfluence : 'media';
+      })(),
   }));
 
+  const qual = (row.qualification as SupabaseRow) || {};
   const qualification: Qualification = row.qualification
     ? {
-        mainProblem: row.qualification.main_problem || row.qualification.bottleneck_details || 'Gargalos operacionais',
-        impactedArea: row.qualification.impacted_area || 'Operações e Comercial',
-        currentWorkflow: row.qualification.current_workflow || 'Processos manuais',
-        currentSystems: row.qualification.current_systems || (row.qualification.has_unintegrated_systems ? 'Sistemas legados' : 'Nenhum'),
-        usesSpreadsheetsManual: row.qualification.uses_spreadsheets_manual ?? row.qualification.manual_spreadsheets ?? true,
-        hasUnintegratedSystems: row.qualification.has_unintegrated_systems ?? row.qualification.unintegrated_systems ?? true,
-        mainBottleneck: row.qualification.main_bottleneck || row.qualification.bottleneck_details || 'Falta de integração',
-        estimatedImpactCost: row.qualification.estimated_impact_cost || (row.qualification.estimated_monthly_loss ? `R$ ${row.qualification.estimated_monthly_loss}/mês` : undefined),
-        hasBudget: row.qualification.has_budget || (row.qualification.has_budget_confirmed ? 'sim_confirmado' : 'verba_em_definicao'),
-        urgencyLevel: row.qualification.urgency_level || (row.qualification.urgency_score >= 4 ? 'alta' : 'media'),
-        opportunityPotential: row.qualification.opportunity_potential || 'alto',
-        consultantNotes: row.qualification.consultant_notes || row.qualification.notes || '',
+        mainProblem: getString(qual, 'main_problem') || getString(qual, 'bottleneck_details', 'Gargalos operacionais'),
+        impactedArea: getString(qual, 'impacted_area', 'Operações e Comercial'),
+        currentWorkflow: getString(qual, 'current_workflow', 'Processos manuais'),
+        currentSystems: getString(qual, 'current_systems') || (getBool(qual, 'has_unintegrated_systems') ? 'Sistemas legados' : 'Nenhum'),
+        usesSpreadsheetsManual: getBool(qual, 'uses_spreadsheets_manual', getBool(qual, 'manual_spreadsheets', true)),
+        hasUnintegratedSystems: getBool(qual, 'has_unintegrated_systems', getBool(qual, 'unintegrated_systems', true)),
+        mainBottleneck: getString(qual, 'main_bottleneck') || getString(qual, 'bottleneck_details', 'Falta de integração'),
+        estimatedImpactCost: getString(qual, 'estimated_impact_cost') || (getString(qual, 'estimated_monthly_loss') ? `R$ ${getString(qual, 'estimated_monthly_loss')}/mês` : undefined),
+        hasBudget: toBudgetStatus(getString(qual, 'has_budget') || (getBool(qual, 'has_budget_confirmed') ? 'sim_confirmado' : 'verba_em_definicao')),
+        urgencyLevel: (() => {
+        const urg = getString(qual, 'urgency_level');
+        const validUrgency = ['baixa', 'media', 'alta', 'critica_imediata'];
+        if (validUrgency.includes(urg)) return urg as Qualification['urgencyLevel'];
+        return getNumber(qual, 'urgency_score') >= 4 ? 'alta' : 'media';
+      })(),
+        opportunityPotential: getString(qual, 'opportunity_potential', 'alto'),
+        consultantNotes: getString(qual, 'consultant_notes') || getString(qual, 'notes'),
       }
     : {
         mainProblem: 'Gargalos de processos e dados dispersos',
@@ -52,52 +117,52 @@ export function mapSupabaseToOpportunity(row: any): Opportunity {
         opportunityPotential: 'alto',
       };
 
-  const activities: Activity[] = (row.activities || []).map((a: any) => ({
-    id: a.id,
-    opportunityId: row.id,
-    consultantId: row.consultant_id || 'usr_tiago',
-    activityType: a.activity_type || a.type || 'reuniao',
-    summary: a.summary || a.title || 'Reunião Realizada',
-    resultDetails: a.result_details || a.description || '',
-    performedAt: a.performed_at || a.scheduled_at || a.created_at || new Date().toISOString(),
-    nextAction: a.next_action || row.next_action_description || 'Follow-up',
-    nextActionDate: a.next_action_date || row.next_action_date || new Date().toISOString(),
+  const activities: Activity[] = ((row.activities as SupabaseRow[]) || []).map((a: SupabaseRow) => ({
+    id: getString(a, 'id'),
+    opportunityId: getString(row, 'id'),
+    consultantId: getString(row, 'consultant_id', 'usr_tiago'),
+    activityType: toActivityType(getString(a, 'activity_type') || getString(a, 'type', 'reuniao')),
+    summary: getString(a, 'summary') || getString(a, 'title', 'Reunião Realizada'),
+    resultDetails: getString(a, 'result_details') || getString(a, 'description'),
+    performedAt: getString(a, 'performed_at') || getString(a, 'scheduled_at') || getString(a, 'created_at', new Date().toISOString()),
+    nextAction: getString(a, 'next_action') || getString(row, 'next_action_description', 'Follow-up'),
+    nextActionDate: getString(a, 'next_action_date') || getString(row, 'next_action_date', new Date().toISOString()),
   }));
 
   return {
-    id: row.id,
-    companyName: company.corporate_name || company.trade_name || company.legal_name || 'Empresa',
-    tradeName: company.trade_name || company.corporate_name || company.legal_name || 'Empresa',
-    cnpj: company.cnpj || '',
-    website: company.website || '',
-    segment: (company.segment as Segment) || 'servicos',
-    state: company.state || 'SP',
-    city: company.city || 'São Paulo',
-    companySize: company.company_size || 'media_50_199',
-    employeeCount: company.employee_count,
-    estimatedRevenueTier: (company.estimated_revenue_tier as RevenueTier) || (company.revenue_tier as RevenueTier) || '15m_a_50m',
-    leadSource: company.lead_source || 'outbound',
-    consultantId: row.consultant_id,
-    consultantName: row.consultant?.name || 'Consultor Nexus',
-    title: row.title || `Consultoria Estratégica - ${company.trade_name || 'Empresa'}`,
-    stage: row.stage as PipelineStage,
-    lostReason: row.lost_reason,
-    solutionService: row.solution_service || 'Diagnóstico & Estruturação Comercial',
-    probability: Number(row.probability || 10),
-    estimatedValue: Number(row.estimated_value || 30000),
-    proposedValue: Number(row.proposed_value || row.estimated_value || 30000),
-    weightedRevenue: Number(row.weighted_revenue || 3000),
-    estimatedCommission: Number(row.estimated_commission || (row.weighted_revenue ? row.weighted_revenue * 0.1 : 300)),
-    estimatedCloseDate: row.estimated_close_date || new Date().toISOString().split('T')[0],
-    score: Number(row.score || 60),
-    nextActionDescription: row.next_action_description || 'Agendar alinhamento',
-    nextActionDate: row.next_action_date || new Date().toISOString(),
-    createdAt: row.created_at || new Date().toISOString(),
-    updatedAt: row.updated_at || new Date().toISOString(),
+    id: getString(row, 'id'),
+    companyName: getString(company, 'corporate_name') || getString(company, 'trade_name') || getString(company, 'legal_name', 'Empresa'),
+    tradeName: getString(company, 'trade_name') || getString(company, 'corporate_name') || getString(company, 'legal_name', 'Empresa'),
+    cnpj: getString(company, 'cnpj'),
+    website: getString(company, 'website'),
+    segment: toSegment(getString(company, 'segment', 'servicos')),
+    state: getString(company, 'state', 'SP'),
+    city: getString(company, 'city', 'São Paulo'),
+    companySize: toCompanySize(getString(company, 'company_size', 'media_50_199')),
+    employeeCount: getNumber(company, 'employee_count'),
+    estimatedRevenueTier: toRevenueTier(getString(company, 'estimated_revenue_tier') || getString(company, 'revenue_tier', '15m_a_50m')),
+    leadSource: toLeadSource(getString(company, 'lead_source', 'outbound')),
+    consultantId: getString(row, 'consultant_id'),
+    consultantName: getString((row.consultant as SupabaseRow) || {}, 'name', 'Consultor Nexus'),
+    title: getString(row, 'title') || `Consultoria Estratégica - ${getString(company, 'trade_name', 'Empresa')}`,
+    stage: toPipelineStage(getString(row, 'stage', 'lead_identificado')),
+    lostReason: getString(row, 'lost_reason'),
+    solutionService: getString(row, 'solution_service', 'Diagnóstico & Estruturação Comercial'),
+    probability: getNumber(row, 'probability', 10),
+    estimatedValue: getNumber(row, 'estimated_value', 30000),
+    proposedValue: getNumber(row, 'proposed_value', getNumber(row, 'estimated_value', 30000)),
+    weightedRevenue: getNumber(row, 'weighted_revenue', 3000),
+    estimatedCommission: getNumber(row, 'estimated_commission', getNumber(row, 'weighted_revenue', 3000) * 0.1),
+    estimatedCloseDate: getString(row, 'estimated_close_date', new Date().toISOString().split('T')[0]),
+    score: getNumber(row, 'score', 60),
+    nextActionDescription: getString(row, 'next_action_description', 'Agendar alinhamento'),
+    nextActionDate: getString(row, 'next_action_date', new Date().toISOString()),
+    createdAt: getString(row, 'created_at', new Date().toISOString()),
+    updatedAt: getString(row, 'updated_at', new Date().toISOString()),
     contacts: contacts.length > 0 ? contacts : [
       {
         id: 'c1',
-        companyId: row.company_id || 'comp_1',
+        companyId: getString(row, 'company_id', 'comp_1'),
         name: 'Contato Principal',
         jobTitle: 'Diretor Geral',
         area: 'diretoria_clevel',
@@ -167,11 +232,12 @@ export const crmService = {
         .eq('id', oppId);
 
       if (error) {
-        console.warn('Aviso ao sincronizar estágio no Supabase:', error.message || error);
-        return { success: false, error: error.message };
+        const msg = error instanceof Error ? error.message : String(error);
+        console.warn('Aviso ao sincronizar estágio no Supabase:', msg);
+        return { success: false, error: msg };
       }
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       console.warn('Erro ao atualizar etapa no Supabase:', err?.message || err);
       return { success: false, error: err?.message };
     }
@@ -287,7 +353,7 @@ export const crmService = {
       }
 
       return { success: true, id: oppData.id };
-    } catch (err: any) {
+    } catch (err) {
       console.warn('Erro ao persistir novo lead no Supabase:', err?.message || err);
       return { success: true, data: opp };
     }
@@ -321,7 +387,7 @@ export const crmService = {
       }
 
       return { success: true };
-    } catch (err: any) {
+    } catch (err) {
       console.warn('Aviso ao salvar atividade no Supabase:', err?.message || err);
       return { success: true };
     }

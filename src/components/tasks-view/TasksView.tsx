@@ -1,9 +1,9 @@
 ﻿'use client';
 
-import React from 'react';
-import { Opportunity, Activity } from '@/types/crm';
+import React, { useCallback } from 'react';
+import { Opportunity } from '@/types/crm';
 import { formatDateTime, isActionOverdue, isActionToday } from '@/lib/utils';
-import { CheckCircle2, Clock, AlertCircle, Phone, MessageSquare, Mail, Video, Calendar, ArrowRight, Building2, Flame } from 'lucide-react';
+import { Clock, AlertCircle, Calendar, ArrowRight, Flame } from 'lucide-react';
 
 interface TasksViewProps {
   opportunities: Opportunity[];
@@ -21,11 +21,24 @@ export function TasksView({ opportunities, onSelectOpportunity, consultantFilter
   const todayTasks = filteredOpportunities.filter((opp) => isActionToday(opp.nextActionDate));
   const upcomingTasks = filteredOpportunities.filter((opp) => !isActionOverdue(opp.nextActionDate) && !isActionToday(opp.nextActionDate));
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, opp: Opportunity) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelectOpportunity(opp);
+      }
+    },
+    [onSelectOpportunity]
+  );
+
   const renderTaskCard = (opp: Opportunity, status: 'overdue' | 'today' | 'upcoming') => (
     <div
       key={opp.id}
       onClick={() => onSelectOpportunity(opp)}
-      className="p-4 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-blue-500/60 rounded-xl transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
+      onKeyDown={(e) => handleKeyDown(e, opp)}
+      tabIndex={0}
+      aria-label={`Tarefa: ${opp.nextActionDescription}. Oportunidade: ${opp.tradeName || opp.companyName}. ${opp.activities.length} interações.`}
+      className="p-4 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-blue-500/60 rounded-xl transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900"
     >
       <div className="space-y-1 flex-1">
         <div className="flex items-center gap-2">

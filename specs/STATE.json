@@ -1,0 +1,12 @@
+{
+  "workflow": "ProspectFlow SpecKit Claude CLI v3",
+  "status": "IN_PROGRESS",
+  "current_feature": "001-saas-foundation",
+  "current_stage": "002-plan.md",
+  "last_completed_file": "001-saas-foundation/001-specify.md",
+  "completed_features": 0,
+  "total_features": 20,
+  "final_release": "PENDING",
+  "last_progress_at": "2026-08-15T00:30:00.000Z",
+  "paused_reason": null
+}

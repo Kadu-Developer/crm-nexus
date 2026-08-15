@@ -14,19 +14,26 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+function getInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark';
+  const saved = localStorage.getItem('nexus_crm_theme') as Theme | null;
+  return saved ?? 'dark';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('nexus_crm_theme') as Theme;
+    const saved = localStorage.getItem('nexus_crm_theme') as Theme | null;
     if (saved) {
-      setTheme(saved);
       document.documentElement.classList.toggle('dark', saved === 'dark');
     } else {
       document.documentElement.classList.add('dark');
     }
+    // Defer mounted to avoid sync setState in effect
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {

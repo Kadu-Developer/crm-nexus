@@ -1,9 +1,9 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
-import { Opportunity, PipelineStage } from '@/types/crm';
-import { USERS } from '@/lib/mock-data';
+import { Opportunity, Segment, CompanySize, LeadSource, DecisionInfluence, ContactArea } from '@/types/crm';
 import { calculateOpportunityScore } from '@/lib/mock-data';
+import { useAuth } from '@/lib/supabase/auth-context';
 import { X, Sparkles, AlertCircle, Building2, UserCircle2, Flame } from 'lucide-react';
 
 interface QuickCaptureModalProps {
@@ -12,8 +12,34 @@ interface QuickCaptureModalProps {
   onSave: (newOpp: Partial<Opportunity>) => void;
 }
 
+function getDefaultNextActionDate(): string {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+}
+
+interface FormData {
+  companyName: string;
+  tradeName: string;
+  cnpj: string;
+  segment: Segment;
+  state: string;
+  city: string;
+  companySize: CompanySize;
+  leadSource: LeadSource;
+  contactName: string;
+  contactJobTitle: string;
+  contactPhone: string;
+  contactEmail: string;
+  isDecisionMaker: boolean;
+  decisionInfluence: DecisionInfluence;
+  mainProblem: string;
+  estimatedValue: number;
+  nextActionDescription: string;
+  nextActionDate: string;
+}
+
 export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModalProps) {
-  const [formData, setFormData] = useState({
+  const { profile } = useAuth();
+  const [formData, setFormData] = useState<FormData>(() => ({
     companyName: '',
     tradeName: '',
     cnpj: '',
@@ -22,24 +48,17 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
     city: '',
     companySize: 'media_50_199',
     leadSource: 'linkedin',
-    consultantId: USERS[0].id,
-    
-    // Contato Principal
     contactName: '',
     contactJobTitle: '',
     contactPhone: '',
     contactEmail: '',
     isDecisionMaker: true,
     decisionInfluence: 'alta',
-    
-    // Dor Inicial & Proposta
     mainProblem: '',
     estimatedValue: 35000,
-    
-    // Regra de Ouro
     nextActionDescription: 'Enviar mensagem de introdução e agendar Pré-Diagnóstico',
-    nextActionDate: '2026-08-15T10:00',
-  });
+    nextActionDate: getDefaultNextActionDate(),
+  }));
 
   if (!isOpen) return null;
 
@@ -50,20 +69,22 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
       return;
     }
 
-    const consultant = USERS.find((u) => u.id === formData.consultantId) || USERS[0];
+    const consultantId = profile?.id || 'usr_tiago';
+    const consultantName = profile?.name || 'Tiago Santos';
+    const commissionRate = profile?.commissionRate || 10;
 
     const newOpp: Partial<Opportunity> = {
       id: `opp_${Date.now()}`,
       companyName: formData.companyName,
       tradeName: formData.tradeName || formData.companyName,
       cnpj: formData.cnpj,
-      segment: formData.segment as any,
+      segment: formData.segment,
       state: formData.state,
       city: formData.city || 'São Paulo',
-      companySize: formData.companySize as any,
-      leadSource: formData.leadSource as any,
-      consultantId: consultant.id,
-      consultantName: consultant.name,
+      companySize: formData.companySize,
+      leadSource: formData.leadSource,
+      consultantId,
+      consultantName,
       title: `Diagnóstico & Soluções - ${formData.tradeName || formData.companyName}`,
       stage: 'lead_identificado',
       solutionService: 'Diagnóstico Comercial e Operacional Nexus',
@@ -71,7 +92,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
       proposedValue: Number(formData.estimatedValue) || 30000,
       probability: 5,
       weightedRevenue: (Number(formData.estimatedValue) || 30000) * 0.05,
-      estimatedCommission: (Number(formData.estimatedValue) || 30000) * (consultant.commissionRate / 100),
+      estimatedCommission: (Number(formData.estimatedValue) || 30000) * (commissionRate / 100),
       estimatedCloseDate: '2026-09-30',
       nextActionDescription: formData.nextActionDescription,
       nextActionDate: new Date(formData.nextActionDate).toISOString(),
@@ -81,11 +102,11 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
           companyId: `opp_${Date.now()}`,
           name: formData.contactName,
           jobTitle: formData.contactJobTitle || 'Gestor',
-          area: 'diretoria_clevel',
+          area: 'diretoria_clevel' as ContactArea,
           phone: formData.contactPhone,
           email: formData.contactEmail,
           isDecisionMaker: formData.isDecisionMaker,
-          decisionInfluence: formData.decisionInfluence as any,
+          decisionInfluence: formData.decisionInfluence,
         },
       ],
       qualification: {
@@ -104,7 +125,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
         {
           id: `act_${Date.now()}`,
           opportunityId: `opp_${Date.now()}`,
-          consultantId: consultant.id,
+          consultantId,
           activityType: 'linkedin',
           summary: 'Cadastro Inicial do Lead',
           resultDetails: 'Oportunidade identificada e cadastrada no pipeline Nexus.',
@@ -238,17 +259,13 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
 
               <div>
                 <label className="block text-xs text-slate-300 font-medium mb-1">Consultor Responsável</label>
-                <select
-                  value={formData.consultantId}
-                  onChange={(e) => setFormData({ ...formData, consultantId: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                >
-                  {USERS.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role === 'admin_ceo' ? 'Diretoria' : 'Consultor'})
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 flex items-center gap-2">
+                  <UserCircle2 className="w-4 h-4 text-blue-400" />
+                  <span>{profile?.name || 'Tiago Santos'}</span>
+                  {profile?.role === 'admin_ceo' && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded font-bold">CEO</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -1,15 +1,14 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/navigation';
-import { USERS } from '@/lib/mock-data';
 import { ThemeProvider } from '@/lib/theme-provider';
-import { Flame, Shield, Lock, Mail, ArrowRight, UserCheck, ShieldAlert, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
 function LoginContent() {
-  const { signInWithEmail, switchMockUser } = useAuth();
+  const { signInWithEmail } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,12 +26,6 @@ function LoginContent() {
       toast.success('Bem-vindo ao CRM Nexus!', { description: 'Sessão iniciada com sucesso.' });
       router.push('/');
     }
-  };
-
-  const handleQuickLogin = (userId: string) => {
-    switchMockUser(userId);
-    toast.success('Login efetuado com sucesso!');
-    router.push('/');
   };
 
   return (
@@ -102,88 +95,11 @@ function LoginContent() {
             </button>
           </form>
 
-          {/* Divisor */}
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-800 w-full" />
-            <span className="bg-slate-900 px-3 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-              Ou selecione um perfil para testar
-            </span>
-          </div>
-
-          {/* Perfis Rápidos de Demonstração */}
-          <div className="space-y-2">
-            {/* CEO / Administrador */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('usr_ceo')}
-              className="w-full p-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/50 rounded-xl flex items-center justify-between transition group cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-black flex items-center justify-center text-xs">
-                  👑
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-amber-200 group-hover:text-white block">
-                    Diretoria Executiva (CEO / Admin)
-                  </span>
-                  <span className="text-[11px] text-amber-400/80">
-                    Visão Global 360° de todo o pipeline e metas
-                  </span>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition" />
-            </button>
-
-            {/* Funcionário / Consultor Tiago */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('usr_tiago')}
-              className="w-full p-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 hover:border-blue-500/50 rounded-xl flex items-center justify-between transition group cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-300 font-bold flex items-center justify-center text-xs">
-                  TS
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-blue-200 group-hover:text-white block">
-                    Tiago Santos (Consultor Comercial)
-                  </span>
-                  <span className="text-[11px] text-blue-400/80">
-                    Visão do consultor (Seus leads e comissões)
-                  </span>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition" />
-            </button>
-
-            {/* Funcionária / Consultora Ana */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('usr_ana')}
-              className="w-full p-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-500/50 rounded-xl flex items-center justify-between transition group cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-bold flex items-center justify-center text-xs">
-                  AR
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-indigo-200 group-hover:text-white block">
-                    Ana Ribeiro (Consultora Comercial)
-                  </span>
-                  <span className="text-[11px] text-indigo-400/80">
-                    Visão da consultora (Seus leads e comissões)
-                  </span>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition" />
-            </button>
-          </div>
+          {/* Rodapé de Informação */}
+          <p className="text-center text-[11px] text-slate-500">
+            CRM Nexus &copy; 2026 &bull; Gestão Comercial Estratégica B2B
+          </p>
         </div>
-
-        {/* Rodapé de Informação */}
-        <p className="text-center text-[11px] text-slate-500">
-          CRM Nexus &copy; 2026 &bull; Gestão Comercial Estratégica B2B
-        </p>
       </div>
     </div>
   );

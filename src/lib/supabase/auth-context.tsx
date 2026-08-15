@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { User as AppUser } from '@/types/crm';
-import { USERS } from '@/lib/mock-data';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -11,7 +10,6 @@ interface AuthContextType {
   isLoading: boolean;
   signInWithEmail: (email: string, password?: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  switchMockUser: (userId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,98 +18,107 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   signInWithEmail: async () => ({}),
   signOut: async () => {},
-  switchMockUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [profile, setProfile] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Troca rápida de usuário (para simular visões de Tiago, Ana ou CEO Diretoria)
-  const switchMockUser = (userId: string) => {
-    const found = USERS.find((u) => u.id === userId);
-    if (found) {
-      setUser(found);
-      localStorage.setItem('nexus_current_user', JSON.stringify(found));
-    }
-  };
-
   useEffect(() => {
-    const saved = localStorage.getItem('nexus_current_user');
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch (e) {}
-    }
-    setIsLoading(false);
+    // Get session from Supabase
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Fetch profile from database
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profileData, error }) => {
+            if (!error && profileData) {
+              const appUser: AppUser = {
+                id: profileData.id,
+                name: profileData.name,
+                email: profileData.email,
+                role: profileData.role,
+                avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+                commissionRate: profileData.commission_rate || 10,
+              };
+              setUser(appUser);
+              setProfile(appUser);
+            }
+          });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          // Fetch profile from database
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!error && profileData) {
+            const appUser: AppUser = {
+              id: profileData.id,
+              name: profileData.name,
+              email: profileData.email,
+              role: profileData.role,
+              avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+              commissionRate: profileData.commission_rate || 10,
+            };
+            setUser(appUser);
+            setProfile(appUser);
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signInWithEmail = async (email: string, password?: string) => {
     setIsLoading(true);
     try {
-      // 1. Se o Supabase estiver configurado com credenciais reais
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: password || '123456',
-        });
-        if (error) {
-          // Fallback para usuário de demonstração com mesmo e-mail se falhar
-          const matched = USERS.find((u) => u.email.toLowerCase() === email.toLowerCase()) || {
-            id: `usr_${Date.now()}`,
-            name: email.split('@')[0],
-            email: email,
-            role: email.includes('ceo') || email.includes('diretoria') || email.includes('admin') ? 'admin_ceo' : 'consultant',
-            avatar: email.substring(0, 2).toUpperCase(),
-            commissionRate: 10,
-          };
-          setUser(matched as AppUser);
-          localStorage.setItem('nexus_current_user', JSON.stringify(matched));
-        } else if (data.user) {
-          const matched = USERS.find((u) => u.email.toLowerCase() === email.toLowerCase()) || {
-            id: data.user.id,
-            name: data.user.email?.split('@')[0] || 'Usuário',
-            email: data.user.email || email,
-            role: email.includes('ceo') || email.includes('diretoria') ? 'admin_ceo' : 'consultant',
-            avatar: email.substring(0, 2).toUpperCase(),
-            commissionRate: 10,
-          };
-          setUser(matched as AppUser);
-          localStorage.setItem('nexus_current_user', JSON.stringify(matched));
-        }
-      } else {
-        // Modo Simulação / Demo
-        const matched = USERS.find((u) => u.email.toLowerCase() === email.toLowerCase()) || {
-          id: `usr_${Date.now()}`,
-          name: email.split('@')[0],
-          email: email,
-          role: email.includes('ceo') || email.includes('diretoria') || email.includes('admin') ? 'admin_ceo' : 'consultant',
-          avatar: email.substring(0, 2).toUpperCase(),
-          commissionRate: 10,
-        };
-        setUser(matched as AppUser);
-        localStorage.setItem('nexus_current_user', JSON.stringify(matched));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: password || '',
+      });
+
+      if (error) {
+        setIsLoading(false);
+        return { error: error.message };
       }
+
       setIsLoading(false);
       return {};
-    } catch (err: any) {
+    } catch (err) {
       setIsLoading(false);
-      return { error: err.message || 'Erro ao realizar login.' };
+      const message = err instanceof Error ? err.message : 'Erro ao realizar login.';
+      return { error: message };
     }
   };
 
   const signOut = async () => {
-    try {
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {}
-    setUser(null);
-    localStorage.removeItem('nexus_current_user');
+    await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile: user, isLoading, signInWithEmail, signOut, switchMockUser }}>
+    <AuthContext.Provider value={{ user, profile, isLoading, signInWithEmail, signOut }}>
       {children}
     </AuthContext.Provider>
   );
