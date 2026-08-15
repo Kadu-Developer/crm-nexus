@@ -24,7 +24,8 @@ function LoginContent() {
       toast.error('Erro de autenticação', { description: res.error });
     } else {
       toast.success('Bem-vindo ao CRM Nexus!', { description: 'Sessão iniciada com sucesso.' });
-      router.push('/');
+      // Force a full page reload to ensure auth state is updated
+      window.location.href = '/';
     }
   };
 

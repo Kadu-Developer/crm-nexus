@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { User as AppUser } from '@/types/crm';
+import { USERS } from '@/lib/mock-data';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -20,12 +21,46 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+// Mock user lookup for demo mode
+const findMockUser = (email: string): AppUser | undefined => {
+  const user = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (user) {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      commissionRate: user.commissionRate,
+    };
+  }
+  return undefined;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Demo mode: auto-login with mock user if using placeholder Supabase
+  const isDemoMode = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://seu-projeto.supabase.co';
+  const DEMO_USER_KEY = 'demoUser';
+
   useEffect(() => {
+    if (isDemoMode) {
+      // In demo mode, check for persisted demo user in localStorage
+      const storedUserEmail = localStorage.getItem(DEMO_USER_KEY);
+      if (storedUserEmail) {
+        const mockUser = findMockUser(storedUserEmail);
+        if (mockUser) {
+          setUser(mockUser);
+          setProfile(mockUser);
+        }
+      }
+      setIsLoading(false);
+      return;
+    }
+
     // Get session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -93,6 +128,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = async (email: string, password?: string) => {
     setIsLoading(true);
+
+    if (isDemoMode) {
+      // Demo mode: accept any email that matches mock users
+      const mockUser = findMockUser(email);
+      if (mockUser) {
+        localStorage.setItem(DEMO_USER_KEY, email);
+        setUser(mockUser);
+        setProfile(mockUser);
+        setIsLoading(false);
+        return {};
+      }
+      setIsLoading(false);
+      return { error: 'Usuário não encontrado no modo demo. Tente: tiago@nexus.com.br, ana@nexus.com.br ou diretoria@nexus.com.br' };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -114,6 +164,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (isDemoMode) {
+      localStorage.removeItem(DEMO_USER_KEY);
+      setUser(null);
+      setProfile(null);
+      return;
+    }
     await supabase.auth.signOut();
   };
 
