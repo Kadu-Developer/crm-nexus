@@ -162,6 +162,24 @@ class CalendarService {
 
     if (events.length === 0) {
       events = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
+      if (events.length === 0 && typeof window !== 'undefined') {
+        try {
+          const syncRes = await fetch('/api/calendar/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData.events && syncData.events.length > 0) {
+              events = syncData.events;
+              this.setStorageItem(STORAGE_KEYS.EVENTS, events);
+            }
+          }
+        } catch {
+          // Fallback silencioso
+        }
+      }
     }
 
     // Sincroniza apenas reuniões reais do CRM que tenham data agendada
