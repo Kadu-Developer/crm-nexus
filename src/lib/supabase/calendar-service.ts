@@ -32,6 +32,8 @@ class CalendarService {
 
   // 1. Obter Colaboradores Reais (Supabase ➔ Local)
   public async getCollaborators(): Promise<CollaboratorAccount[]> {
+    let list: CollaboratorAccount[] = [];
+
     try {
       const { data, error } = await supabase
         .from('calendar_collaborators')
@@ -39,7 +41,7 @@ class CalendarService {
         .order('created_at', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        const mapped: CollaboratorAccount[] = data.map((d: any) => ({
+        list = data.map((d: any) => ({
           id: d.id,
           name: d.name,
           roleTitle: d.role_title,
@@ -53,15 +55,26 @@ class CalendarService {
           lastSyncAt: d.last_sync_at,
           isVisible: d.is_visible,
         }));
-        this.setStorageItem(STORAGE_KEYS.COLLABORATORS, mapped);
-        return mapped;
       }
     } catch {
       // Ignora e usa fallback
     }
 
-    const localCollabs = this.getStorageItem<CollaboratorAccount[]>(STORAGE_KEYS.COLLABORATORS, DEFAULT_COLLABORATORS);
-    return localCollabs;
+    if (list.length === 0) {
+      list = this.getStorageItem<CollaboratorAccount[]>(STORAGE_KEYS.COLLABORATORS, DEFAULT_COLLABORATORS);
+    }
+
+    // Desduplica por e-mail ou prefixo de nome
+    const seen = new Set<string>();
+    const deduplicated = list.filter((c) => {
+      const key = (c.email || c.name || c.id).toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    this.setStorageItem(STORAGE_KEYS.COLLABORATORS, deduplicated);
+    return deduplicated;
   }
 
   public async getAccounts(): Promise<CollaboratorAccount[]> {

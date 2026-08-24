@@ -79,41 +79,22 @@ export function CalendarLeftSidebar({
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Colaboradores ({visibleAccountsCount}/{accounts.length})
             </span>
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={onOpenAddCollaborator}
-                className="p-1 rounded text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                title="Conectar Novo Colaborador"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={onSyncGoogle}
-                disabled={isSyncing}
-                className={`p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer ${
-                  isSyncing ? 'animate-spin text-blue-500' : ''
-                }`}
-                title="Sincronizar Google Workspace"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
-              <button
-                type="button"
-                onClick={onOpenGoogleSettings}
-                className="p-1 rounded text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                title="Configurar Integração Google"
-              >
-                <Settings className="w-3 h-3" />
-              </button>
-            </div>
           </div>
 
-          {/* Botão Destaque: Conectar Google Workspace */}
+          {/* Botão Único: Conectar / Logar Google Agenda */}
           <button
             type="button"
-            onClick={onOpenGoogleSettings}
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/calendar/auth');
+                const data = await res.json();
+                if (data.authUrl) {
+                  window.location.href = data.authUrl;
+                }
+              } catch {
+                onOpenGoogleSettings();
+              }
+            }}
             className="w-full py-2 px-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-gradient-to-r from-blue-50 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/30 hover:border-blue-400 dark:hover:border-blue-600 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between transition cursor-pointer shadow-xs group"
           >
             <div className="flex items-center gap-2">
@@ -123,7 +104,7 @@ export function CalendarLeftSidebar({
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
               </svg>
-              <span className="text-[11px] group-hover:text-blue-600 dark:group-hover:text-cyan-400">Logar Google Agenda</span>
+              <span className="text-[11px] group-hover:text-blue-600 dark:group-hover:text-cyan-400">Conectar Google Agenda</span>
             </div>
             <span className="text-[10px] text-blue-600 dark:text-cyan-400 font-bold">OAuth ➔</span>
           </button>
