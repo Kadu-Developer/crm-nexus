@@ -231,26 +231,24 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const filteredEvents = useMemo(() => {
     const visibleAccountIds = new Set(accounts.filter((a) => a.isVisible).map((a) => a.id));
     const visibleCategoryIds = new Set(categories.filter((c) => c.isVisible).map((c) => c.id));
+    const hasAnyAccountVisible = accounts.some((a) => a.isVisible);
 
     return events.filter((e) => {
-      // Se todos estiverem desmarcados, oculta
-      if (!accounts.some((a) => a.isVisible)) return false;
-
-      // Se for evento de toda a equipe
-      if (e.collaboratorId === 'all_team' || e.ctoId === 'both') {
-        // Exibe se ao menos um participante estiver ativo
-      } else {
+      // Se for evento do Google ou se nenhum filtro estiver restritivo, exibe
+      if (hasAnyAccountVisible) {
         const isMainOwnerVisible =
-          visibleAccountIds.has(e.collaboratorId) || (e.ctoId && visibleAccountIds.has(e.ctoId));
+          visibleAccountIds.has(e.collaboratorId) || (e.ctoId && visibleAccountIds.has(e.ctoId)) || e.collaboratorId === 'all_team' || e.collaboratorId === 'collab_carlos';
         const isCoHostVisible = e.additionalCollaboratorIds?.some((id) => visibleAccountIds.has(id));
 
-        if (!isMainOwnerVisible && !isCoHostVisible) {
+        if (!isMainOwnerVisible && !isCoHostVisible && e.source !== 'google_calendar') {
           return false;
         }
       }
 
-      // Filtro de categoria
-      if (!visibleCategoryIds.has(e.categoryId)) return false;
+      // Filtro de categoria (apenas se houver categorias visíveis e a categoria do evento for conhecida)
+      if (visibleCategoryIds.size > 0 && e.categoryId && !visibleCategoryIds.has(e.categoryId)) {
+        return false;
+      }
 
       // Filtro de busca
       if (searchQuery.trim()) {
