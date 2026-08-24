@@ -35,8 +35,10 @@ import {
   BarChart3,
   Settings,
   Calendar as CalendarIcon,
+  UserPlus,
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
+import { AddCollaboratorModal } from '@/components/calendar/AddCollaboratorModal';
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
@@ -47,6 +49,7 @@ function AppContent() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isAddCollabOpen, setIsAddCollabOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar'>('kanban');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
@@ -401,6 +404,18 @@ function AppContent() {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
 
+          {/* Botão Convidar Colaborador (Admin / CEO) */}
+          {profile?.role === 'admin_ceo' && (
+            <button
+              onClick={() => setIsAddCollabOpen(true)}
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-2 rounded-lg transition-colors active:scale-95 cursor-pointer shadow-xs"
+              title="Cadastrar novo colaborador / consultor na equipe"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">+ Colaborador</span>
+            </button>
+          )}
+
           {/* Botão de Cadastro Rápido */}
           <button
             onClick={() => setIsQuickCaptureOpen(true)}
@@ -471,6 +486,14 @@ function AppContent() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onAddActivity={handleAddActivity}
+      />
+
+      <AddCollaboratorModal
+        isOpen={isAddCollabOpen}
+        onClose={() => setIsAddCollabOpen(false)}
+        onAdd={() => {
+          loadPipelineData();
+        }}
       />
 
       {/* Modal de Troca Obrigatória de Senha no 1º Login */}
