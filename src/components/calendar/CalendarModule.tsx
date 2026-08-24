@@ -231,26 +231,27 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const filteredEvents = useMemo(() => {
     const visibleAccountIds = new Set(accounts.filter((a) => a.isVisible).map((a) => a.id));
     const visibleCategoryIds = new Set(categories.filter((c) => c.isVisible).map((c) => c.id));
-    const hasAnyAccountVisible = accounts.some((a) => a.isVisible);
 
     return events.filter((e) => {
-      // Se for evento do Google ou se nenhum filtro estiver restritivo, exibe
-      if (hasAnyAccountVisible) {
-        const isMainOwnerVisible =
-          visibleAccountIds.has(e.collaboratorId) || (e.ctoId && visibleAccountIds.has(e.ctoId)) || e.collaboratorId === 'all_team' || e.collaboratorId === 'collab_carlos';
+      // 1. Filtro de Colaborador (se desmarcado no painel, oculta imediatamente)
+      if (accounts.length > 0) {
+        const collabId = e.collaboratorId || e.ctoId || 'collab_carlos';
+        const isMainOwnerVisible = visibleAccountIds.has(collabId) || collabId === 'all_team';
         const isCoHostVisible = e.additionalCollaboratorIds?.some((id) => visibleAccountIds.has(id));
 
-        if (!isMainOwnerVisible && !isCoHostVisible && e.source !== 'google_calendar') {
+        if (!isMainOwnerVisible && !isCoHostVisible) {
           return false;
         }
       }
 
-      // Filtro de categoria (apenas se houver categorias visíveis e a categoria do evento for conhecida)
-      if (visibleCategoryIds.size > 0 && e.categoryId && !visibleCategoryIds.has(e.categoryId)) {
-        return false;
+      // 2. Filtro de Categoria (se desmarcado no painel, oculta imediatamente)
+      if (categories.length > 0 && e.categoryId) {
+        if (!visibleCategoryIds.has(e.categoryId)) {
+          return false;
+        }
       }
 
-      // Filtro de busca
+      // 3. Filtro de Busca
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = e.title.toLowerCase().includes(q);
