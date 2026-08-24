@@ -4,7 +4,7 @@ export const USERS: User[] = [
   {
     id: 'usr_carlos',
     name: 'Carlos Eduardo',
-    email: 'carlos@nexustechflow.com.br',
+    email: 'carlos@nexusflowtech.com.br',
     role: 'admin_ceo',
     avatar: 'CE',
     commissionRate: 0,

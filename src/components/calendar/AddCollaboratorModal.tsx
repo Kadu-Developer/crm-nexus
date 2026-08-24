@@ -210,7 +210,7 @@ export function AddCollaboratorModal({ isOpen, onClose, onAdd }: AddCollaborator
               <input
                 type="email"
                 required
-                placeholder="beatriz@nexustechflow.com.br"
+                placeholder="beatriz@nexusflowtech.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 font-mono"

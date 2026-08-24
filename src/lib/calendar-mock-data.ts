@@ -6,10 +6,10 @@ export const DEFAULT_COLLABORATORS: CollaboratorAccount[] = [
     name: 'Carlos Eduardo',
     roleTitle: 'Diretor / CTO',
     department: 'executivo',
-    email: 'carlos@nexustechflow.com.br',
+    email: 'carlos@nexusflowtech.com.br',
     avatar: 'CE',
     color: '#0284c7',
-    googleCalendarId: 'carlos@nexustechflow.com.br',
+    googleCalendarId: 'carlos@nexusflowtech.com.br',
     googleConnected: false,
     syncStatus: 'disconnected',
     lastSyncAt: '',
@@ -89,7 +89,7 @@ export const DEFAULT_CATEGORIES: CalendarCategory[] = [
 ];
 
 export const DEFAULT_GOOGLE_SETTINGS: GoogleIntegrationSettings = {
-  domain: 'nexustechflow.com.br',
+  domain: 'nexusflowtech.com.br',
   domainWideSync: true,
   autoSyncIntervalMinutes: 15,
   syncCrmDiagnosticos: true,

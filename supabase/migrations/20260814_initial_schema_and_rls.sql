@@ -252,7 +252,7 @@ BEGIN
   );
 
   -- Determinar cargo (admin_ceo para emails chave, ou o que vier no metadata)
-  IF NEW.email IN ('carlos@nexustechflow.com.br', 'diretoria@nexus.com.br', 'kaduesr@gmail.com') THEN
+  IF NEW.email IN ('carlos@nexusflowtech.com.br', 'diretoria@nexus.com.br', 'kaduesr@gmail.com') THEN
     user_role_val := 'admin_ceo'::public.user_role;
   ELSIF (NEW.raw_user_meta_data->>'role') IN ('admin_ceo', 'consultant', 'viewer') THEN
     user_role_val := (NEW.raw_user_meta_data->>'role')::public.user_role;
