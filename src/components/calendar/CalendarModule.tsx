@@ -66,6 +66,18 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   useEffect(() => {
     loadData();
+
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('google_connected') === 'true') {
+        const count = urlParams.get('synced_count') || '0';
+        toast.success('Conta Google conectada com sucesso!', {
+          description: `${count} eventos sincronizados diretamente da sua Google Agenda.`,
+        });
+        loadData();
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
   }, [loadData]);
 
   // Alternar visibilidade de um colaborador

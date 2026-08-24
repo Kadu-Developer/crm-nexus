@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v2/userinfo';
@@ -56,16 +57,102 @@ export async function GET(request: NextRequest) {
       googleProfile = await userinfoResponse.json();
     }
 
-    // 3. Redireciona com dados codificados para que o frontend persista de imediato
+    const userEmail = (googleProfile.email || 'carlos@nexusflowtech.com.br').toLowerCase().trim();
+    const userName = googleProfile.name || 'Carlos Eduardo';
+
+    // 3. Buscar eventos reais do Google Calendar imediatamente
+    let syncedEventsCount = 0;
+    try {
+      const minTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const maxTime = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+
+      const calUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+      calUrl.searchParams.set('timeMin', minTime);
+      calUrl.searchParams.set('timeMax', maxTime);
+      calUrl.searchParams.set('singleEvents', 'true');
+      calUrl.searchParams.set('orderBy', 'startTime');
+      calUrl.searchParams.set('maxResults', '250');
+
+      const calRes = await fetch(calUrl.toString(), {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (calRes.ok) {
+        const calData = await calRes.json();
+        const items = calData.items || [];
+        syncedEventsCount = items.length;
+
+        // Salvar eventos na tabela calendar_events do Supabase
+        for (const item of items) {
+          const startTime = item.start?.dateTime || item.start?.date || new Date().toISOString();
+          const endTime = item.end?.dateTime || item.end?.date || new Date(new Date(startTime).getTime() + 3600000).toISOString();
+
+          let meetUrl = item.hangoutLink;
+          if (!meetUrl && item.conferenceData?.entryPoints) {
+            const videoEntry = item.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video');
+            if (videoEntry) meetUrl = videoEntry.uri;
+          }
+
+          await supabaseAdmin.from('calendar_events').upsert({
+            id: `google_${item.id}`,
+            google_event_id: item.id,
+            title: item.summary || '(Sem título)',
+            description: item.description || '',
+            location: item.location || '',
+            start_time: startTime,
+            end_time: endTime,
+            is_all_day: !item.start?.dateTime && !!item.start?.date,
+            meet_url: meetUrl || null,
+            collaborator_id: 'collab_carlos',
+            category_id: 'tech_alignment',
+            source: 'google_calendar',
+            status: item.status === 'cancelled' ? 'cancelled' : 'confirmed',
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (fetchErr) {
+      console.warn('Erro ao buscar eventos durante o callback:', fetchErr);
+    }
+
+    // 4. Salvar / Atualizar colaborador com Google conectado
+    await supabaseAdmin.from('calendar_collaborators').upsert({
+      id: 'collab_carlos',
+      name: userName,
+      email: userEmail,
+      role_title: 'Diretor / CTO',
+      department: 'executivo',
+      avatar: 'CE',
+      color: '#0284c7',
+      google_calendar_id: userEmail,
+      google_connected: true,
+      sync_status: 'synced',
+      last_sync_at: new Date().toISOString(),
+      is_visible: true,
+    });
+
+    // 5. Redirecionar para o CRM com cookies e status de sucesso
     const state = stateStr ? JSON.parse(stateStr) : {};
     const redirectPath = state.redirectPath || '/';
 
     const redirectUrl = new URL(redirectPath, origin);
     redirectUrl.searchParams.set('google_connected', 'true');
-    redirectUrl.searchParams.set('email', googleProfile.email);
-    redirectUrl.searchParams.set('name', googleProfile.name);
+    redirectUrl.searchParams.set('email', userEmail);
+    redirectUrl.searchParams.set('synced_count', String(syncedEventsCount));
 
-    return NextResponse.redirect(redirectUrl.toString());
+    const response = NextResponse.redirect(redirectUrl.toString());
+
+    // Configurar cookie com o token de acesso
+    response.cookies.set('google_access_token', access_token, {
+      path: '/',
+      maxAge: expires_in || 3600,
+      sameSite: 'lax',
+    });
+
+    return response;
   } catch (err) {
     console.error('Erro no callback do Google Calendar:', err);
     return NextResponse.redirect(`${origin}?calendar_error=Erro_interno_no_servidor`);

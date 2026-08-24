@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { accessToken, calendarId = 'primary', timeMin, timeMax } = body;
+    const cookieToken = request.cookies.get('google_access_token')?.value;
+    const accessToken = body.accessToken || cookieToken;
+    const { calendarId = 'primary', timeMin, timeMax } = body;
 
-    // Se um access_token foi fornecido, busca os eventos reais diretamente da API do Google Calendar v3
+    // Se um access_token foi fornecido ou está nos cookies, busca os eventos reais diretamente da API do Google Calendar v3
     if (accessToken) {
       const minTime = timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const maxTime = timeMax || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
@@ -42,7 +45,6 @@ export async function POST(request: NextRequest) {
         const endTime = item.end?.dateTime || item.end?.date || new Date(new Date(startTime).getTime() + 3600000).toISOString();
         const isAllDay = !item.start?.dateTime && !!item.start?.date;
 
-        // Obter link do Google Meet caso exista
         let meetUrl = item.hangoutLink;
         if (!meetUrl && item.conferenceData?.entryPoints) {
           const videoEntry = item.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video');
@@ -55,6 +57,8 @@ export async function POST(request: NextRequest) {
           title: item.summary || '(Sem título)',
           description: item.description || '',
           location: item.location || '',
+          collaboratorId: 'collab_carlos',
+          categoryId: 'tech_alignment',
           startTime,
           endTime,
           isAllDay,
@@ -71,6 +75,26 @@ export async function POST(request: NextRequest) {
           updatedAt: item.updated || new Date().toISOString(),
         };
       });
+
+      // Salva eventos no Supabase
+      for (const ev of mappedEvents) {
+        await supabaseAdmin.from('calendar_events').upsert({
+          id: ev.id,
+          google_event_id: ev.googleEventId,
+          title: ev.title,
+          description: ev.description,
+          location: ev.location,
+          start_time: ev.startTime,
+          end_time: ev.endTime,
+          is_all_day: ev.isAllDay,
+          meet_url: ev.meetUrl || null,
+          collaborator_id: 'collab_carlos',
+          category_id: 'tech_alignment',
+          source: 'google_calendar',
+          status: ev.status,
+          updated_at: new Date().toISOString(),
+        });
+      }
 
       return NextResponse.json({
         success: true,
