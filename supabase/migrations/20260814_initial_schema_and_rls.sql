@@ -27,6 +27,8 @@ CREATE TABLE public.profiles (
   role user_role NOT NULL DEFAULT 'consultant',
   avatar_url TEXT,
   commission_rate NUMERIC(5,2) DEFAULT 10.00,
+  must_change_password BOOLEAN NOT NULL DEFAULT TRUE,
+  password_changed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
