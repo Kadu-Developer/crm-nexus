@@ -35,6 +35,7 @@ import {
   BarChart3,
   Settings,
   Calendar as CalendarIcon,
+} from 'lucide-react';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 function AppContent() {

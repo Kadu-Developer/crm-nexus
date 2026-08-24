@@ -260,14 +260,15 @@ BEGIN
     user_role_val := 'consultant'::public.user_role;
   END IF;
 
-  -- Inserir ou atualizar na tabela profiles
-  INSERT INTO public.profiles (id, name, email, role, avatar_url)
+  -- Inserir ou atualizar na tabela profiles (novo usuário inicia com must_change_password = true)
+  INSERT INTO public.profiles (id, name, email, role, avatar_url, must_change_password)
   VALUES (
     NEW.id,
     user_name_val,
     NEW.email,
     user_role_val,
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture')
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
+    TRUE
   )
   ON CONFLICT (id) DO UPDATE
   SET
