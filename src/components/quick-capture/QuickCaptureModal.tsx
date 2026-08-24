@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import React, { useState } from 'react';
-import { Opportunity, Segment, CompanySize, LeadSource, DecisionInfluence, ContactArea } from '@/types/crm';
+import { Opportunity, Segment, CompanySize, LeadSource, DecisionInfluence, ContactArea, PipelineStage } from '@/types/crm';
 import { calculateOpportunityScore } from '@/lib/mock-data';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { X, Sparkles, AlertCircle, Building2, UserCircle2, Flame } from 'lucide-react';
@@ -20,19 +20,24 @@ interface FormData {
   companyName: string;
   tradeName: string;
   cnpj: string;
+  website: string;
   segment: Segment;
   state: string;
   city: string;
   companySize: CompanySize;
   leadSource: LeadSource;
+  stage: PipelineStage;
   contactName: string;
   contactJobTitle: string;
   contactPhone: string;
   contactEmail: string;
+  linkedinUrl: string;
+  contactArea: ContactArea;
   isDecisionMaker: boolean;
   decisionInfluence: DecisionInfluence;
   mainProblem: string;
   estimatedValue: number;
+  consultantNotes: string;
   nextActionDescription: string;
   nextActionDate: string;
 }
@@ -43,19 +48,24 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
     companyName: '',
     tradeName: '',
     cnpj: '',
+    website: '',
     segment: 'industria',
     state: 'SP',
     city: '',
     companySize: 'media_50_199',
     leadSource: 'linkedin',
+    stage: 'lead_identificado',
     contactName: '',
     contactJobTitle: '',
     contactPhone: '',
     contactEmail: '',
+    linkedinUrl: '',
+    contactArea: 'diretoria_clevel',
     isDecisionMaker: true,
     decisionInfluence: 'alta',
     mainProblem: '',
     estimatedValue: 35000,
+    consultantNotes: '',
     nextActionDescription: 'Enviar mensagem de introdução e agendar Pré-Diagnóstico',
     nextActionDate: getDefaultNextActionDate(),
   }));
@@ -78,6 +88,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
       companyName: formData.companyName,
       tradeName: formData.tradeName || formData.companyName,
       cnpj: formData.cnpj,
+      website: formData.website,
       segment: formData.segment,
       state: formData.state,
       city: formData.city || 'São Paulo',
@@ -86,7 +97,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
       consultantId,
       consultantName,
       title: `Diagnóstico & Soluções - ${formData.tradeName || formData.companyName}`,
-      stage: 'lead_identificado',
+      stage: formData.stage,
       solutionService: 'Diagnóstico Comercial e Operacional Nexus',
       estimatedValue: Number(formData.estimatedValue) || 30000,
       proposedValue: Number(formData.estimatedValue) || 30000,
@@ -102,9 +113,10 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
           companyId: `opp_${Date.now()}`,
           name: formData.contactName,
           jobTitle: formData.contactJobTitle || 'Gestor',
-          area: 'diretoria_clevel' as ContactArea,
           phone: formData.contactPhone,
           email: formData.contactEmail,
+          linkedinUrl: formData.linkedinUrl,
+          area: formData.contactArea,
           isDecisionMaker: formData.isDecisionMaker,
           decisionInfluence: formData.decisionInfluence,
         },
@@ -120,6 +132,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
         hasBudget: 'desconhecido',
         urgencyLevel: 'media',
         opportunityPotential: 'medio',
+        consultantNotes: formData.consultantNotes,
       },
       activities: [
         {
@@ -199,10 +212,21 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
               </div>
 
               <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Site</label>
+                <input
+                  type="url"
+                  placeholder="https://empresa.com.br"
+                  value={formData.website}
+                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs text-slate-300 font-medium mb-1">Segmento</label>
                 <select
                   value={formData.segment}
-                  onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, segment: e.target.value as Segment })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="industria">Indústria / Manufatura</option>
@@ -244,7 +268,7 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
                 <label className="block text-xs text-slate-300 font-medium mb-1">Origem do Lead</label>
                 <select
                   value={formData.leadSource}
-                  onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, leadSource: e.target.value as LeadSource })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                 >
                   <option value="linkedin">LinkedIn</option>
@@ -258,6 +282,20 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
               </div>
 
               <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Porte da Empresa</label>
+                <select
+                  value={formData.companySize}
+                  onChange={(e) => setFormData({ ...formData, companySize: e.target.value as CompanySize })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="micro_1_9">MEI / Microempresa</option>
+                  <option value="pequena_10_49">Pequena</option>
+                  <option value="media_50_199">Média</option>
+                  <option value="grande_200_mais">Grande</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs text-slate-300 font-medium mb-1">Consultor Responsável</label>
                 <div className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 flex items-center gap-2">
                   <UserCircle2 className="w-4 h-4 text-blue-400" />
@@ -266,6 +304,22 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
                     <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded font-bold">CEO</span>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Status do Pipeline</label>
+                <select
+                  value={formData.stage}
+                  onChange={(e) => setFormData({ ...formData, stage: e.target.value as PipelineStage })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="lead_identificado">Prospecção</option>
+                  <option value="pre_diag_agendado">Reunião Agendada</option>
+                  <option value="proposta_enviada">Proposta Enviada</option>
+                  <option value="negociacao">Negociação</option>
+                  <option value="fechado_ganho">Fechado Ganho</option>
+                  <option value="fechado_perdido">Fechado Perdido</option>
+                </select>
               </div>
             </div>
           </div>
@@ -322,6 +376,59 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">LinkedIn</label>
+                <input
+                  type="url"
+                  placeholder="https://linkedin.com/in/contato"
+                  value={formData.linkedinUrl}
+                  onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Área</label>
+                <select
+                  value={formData.contactArea}
+                  onChange={(e) => setFormData({ ...formData, contactArea: e.target.value as ContactArea })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="diretoria_clevel">Diretoria / C-Level</option>
+                  <option value="comercial">Comercial</option>
+                  <option value="operacoes">Operações</option>
+                  <option value="ti_sistemas">TI / Sistemas</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="rh">RH</option>
+                  <option value="outro">Outra</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">É decisor?</label>
+                <select
+                  value={formData.isDecisionMaker ? 'sim' : 'nao'}
+                  onChange={(e) => setFormData({ ...formData, isDecisionMaker: e.target.value === 'sim' })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="sim">Sim</option>
+                  <option value="nao">Não</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Influência na decisão</label>
+                <select
+                  value={formData.decisionInfluence}
+                  onChange={(e) => setFormData({ ...formData, decisionInfluence: e.target.value as DecisionInfluence })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -343,9 +450,34 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
                 />
               </div>
 
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Investimento estimado</label>
+                <select
+                  value={formData.estimatedValue}
+                  onChange={(e) => setFormData({ ...formData, estimatedValue: Number(e.target.value) })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="10000">Até R$ 10.000</option>
+                  <option value="50000">Até R$ 50.000</option>
+                  <option value="100000">Até R$ 100.000</option>
+                  <option value="250000">Até R$ 250.000</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-300 font-medium mb-1">Observações do consultor</label>
+                <textarea
+                  rows={3}
+                  placeholder="Contexto, necessidades e informações relevantes..."
+                  value={formData.consultantNotes}
+                  onChange={(e) => setFormData({ ...formData, consultantNotes: e.target.value })}
+                  className="w-full resize-y bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
               <div className="p-4 bg-amber-950/20 border border-amber-500/30 rounded-xl space-y-3">
                 <div className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center justify-between">
-                  <span>📌 Regra Nexus: Nenhuma oportunidade sem próximo passo!</span>
+                  <span>Regra Nexus: nenhuma oportunidade sem próximo passo</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

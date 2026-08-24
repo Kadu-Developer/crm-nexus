@@ -1,6 +1,7 @@
-﻿'use client';
+'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Opportunity, PipelineStage, Activity } from '@/types/crm';
 import { INITIAL_OPPORTUNITIES, STAGES } from '@/lib/mock-data';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
@@ -8,8 +9,10 @@ import { QuickCaptureModal } from '@/components/quick-capture/QuickCaptureModal'
 import { LeadDetailModal } from '@/components/lead-modal/LeadDetailModal';
 import { CeoDashboard } from '@/components/dashboard/CeoDashboard';
 import { TasksView } from '@/components/tasks-view/TasksView';
-import { ThemeProvider, useTheme } from '@/lib/theme-provider';
-import { AuthProvider, useAuth } from '@/lib/supabase/auth-context';
+import { ClientPortfolio } from '@/components/client-portfolio/ClientPortfolio';
+import { CalendarModule } from '@/components/calendar/CalendarModule';
+import { useTheme } from '@/lib/theme-provider';
+import { useAuth } from '@/lib/supabase/auth-context';
 import { crmService } from '@/lib/supabase/crm-service';
 import { useRouter } from 'next/navigation';
 import { Toaster, toast } from 'sonner';
@@ -27,6 +30,11 @@ import {
   ShieldCheck,
   RefreshCw,
   Lock,
+  Home as HomeIcon,
+  Building2,
+  BarChart3,
+  Settings,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 
 function AppContent() {
@@ -38,7 +46,7 @@ function AppContent() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks'>('kanban');
+  const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar'>('kanban');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
   const [consultantFilter, setConsultantFilter] = useState<string>('all');
@@ -50,34 +58,30 @@ function AppContent() {
     }
   }, [isLoading, profile, router]);
 
+  const loadPipelineData = useCallback(async () => {
+    if (!profile) return;
+
+    setLoadingData(true);
+    const data = await crmService.getOpportunities();
+    if (data && data.length > 0) {
+      setOpportunities(data);
+    }
+    setLoadingData(false);
+  }, [profile]);
+
   useEffect(() => {
     if (!profile) return;
 
-    let unsubscribe: (() => void) | undefined;
-    let isMounted = true;
+    queueMicrotask(() => loadPipelineData());
 
-    const fetchData = async () => {
-      setLoadingData(true);
-      const data = await crmService.getOpportunities();
-      if (isMounted && data && data.length > 0) {
-        setOpportunities(data);
-      }
-      if (isMounted) {
-        setLoadingData(false);
-      }
-    };
-
-    fetchData();
-
-    unsubscribe = crmService.subscribeToChanges(() => {
-      fetchData();
+    const unsubscribe = crmService.subscribeToChanges(() => {
+      loadPipelineData();
     });
 
     return () => {
-      isMounted = false;
-      unsubscribe?.();
+      unsubscribe();
     };
-  }, [profile]);
+  }, [loadPipelineData, profile]);
 
   if (isLoading || !profile) {
     return (
@@ -114,6 +118,17 @@ function AppContent() {
         return opp;
       })
     );
+
+    setSelectedOpportunity((selected) => {
+      if (!selected || selected.id !== oppId) return selected;
+      return {
+        ...selected,
+        stage: newStage,
+        probability: newProb,
+        weightedRevenue: newWeighted,
+        updatedAt: new Date().toISOString(),
+      };
+    });
 
     toast.success(`${movedOppName || 'Oportunidade'} avançou no funil!`, {
       description: `Nova etapa: ${stageDef?.title} (${newProb}% prob.)`,
@@ -191,8 +206,12 @@ function AppContent() {
     router.push('/login');
   };
 
-  // Filtragem de busca global (RLS no Supabase já garante que consultores vejam apenas seus leads)
-  const displayedOpportunities = opportunities.filter((opp) => {
+  // O RLS cobre o Supabase; este filtro mantém a mesma regra no modo demo.
+  const roleScopedOpportunities = profile.role === 'admin_ceo'
+    ? opportunities
+    : opportunities.filter((opp) => opp.consultantId === profile.id);
+
+  const displayedOpportunities = roleScopedOpportunities.filter((opp) => {
     const searchMatch =
       opp.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       opp.tradeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -201,17 +220,76 @@ function AppContent() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200">
       <Toaster position="top-right" richColors theme={theme} />
 
+      {/* Navegação lateral compacta */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-14 flex-col items-center border-r border-[#0b3d8f] bg-[#052D72] pt-20 md:flex">
+        <div className="flex flex-col items-center gap-2">
+          <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={30} className="mb-2 h-8 w-7 object-contain" />
+          <button
+            type="button"
+            onClick={() => setCurrentView('kanban')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'kanban' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Abrir pipeline"
+            title="Pipeline"
+          >
+            <HomeIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView('tasks')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'tasks' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Abrir tarefas"
+            title="Meu dia"
+          >
+            <CheckSquare className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView('calendar')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'calendar' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Abrir Agenda Google da Equipe"
+            title="Agenda da Equipe (Google)"
+          >
+            <CalendarIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView('dashboard')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'dashboard' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Abrir dashboard"
+            title="Dashboard"
+          >
+            <BarChart3 className="h-4 w-4" />
+          </button>
+          <div className="my-1 h-px w-7 bg-white/20" />
+          <button
+            type="button"
+            onClick={() => setCurrentView('clients')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'clients' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Empresas"
+            title="Empresas"
+          >
+            <Building2 className="h-4 w-4" />
+          </button>
+        </div>
+        <button
+          type="button"
+          className="mt-auto mb-5 flex h-10 w-10 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Configurações"
+          title="Configurações"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
+      </aside>
+
       {/* Top Navbar */}
-      <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 bg-white/85 dark:bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
+      <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 pl-6 md:pl-[5.5rem] flex items-center justify-between sticky top-0 z-30 transition-colors">
         <div className="flex items-center gap-6">
           {/* Logo Nexus */}
           <div className="flex items-center gap-3 cursor-pointer select-none" onClick={() => setCurrentView('kanban')}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-500/25">
-              N
-            </div>
+            <Image src="/assets/logos/logo-shield-symbol.png" alt="Nexus Flow Tech" width={350} height={138} className="h-8 w-auto object-contain" priority />
             <div>
               <h1 className="font-black text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
                 NEXUS{' '}
@@ -233,7 +311,7 @@ function AppContent() {
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
-              Pipeline (14 Etapas)
+              Pipeline (6 Etapas)
             </button>
             <button
               onClick={() => setCurrentView('tasks')}
@@ -245,6 +323,17 @@ function AppContent() {
             >
               <CheckSquare className="w-3.5 h-3.5" />
               Meu Dia & Ações
+            </button>
+            <button
+              onClick={() => setCurrentView('calendar')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                currentView === 'calendar'
+                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              Agenda da Equipe (Google)
             </button>
             <button
               onClick={() => setCurrentView('dashboard')}
@@ -314,7 +403,7 @@ function AppContent() {
           {/* Botão de Cadastro Rápido */}
           <button
             onClick={() => setIsQuickCaptureOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-blue-500/25 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 bg-[#F4510B] hover:bg-[#d94308] text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Novo Lead (Quick)</span>
@@ -332,7 +421,7 @@ function AppContent() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 max-w-[1720px] w-full mx-auto">
+      <main className="flex-1 p-6 max-w-[1720px] w-full mx-auto md:pl-[5.5rem]">
         {currentView === 'kanban' && (
           <KanbanBoard
             opportunities={displayedOpportunities}
@@ -350,8 +439,22 @@ function AppContent() {
           />
         )}
 
+        {currentView === 'calendar' && (
+          <CalendarModule
+            opportunities={displayedOpportunities}
+            onSelectOpportunity={handleOpenDetail}
+          />
+        )}
+
         {currentView === 'dashboard' && (
           <CeoDashboard opportunities={displayedOpportunities} />
+        )}
+
+        {currentView === 'clients' && (
+          <ClientPortfolio
+            opportunities={displayedOpportunities}
+            onSelectOpportunity={handleOpenDetail}
+          />
         )}
       </main>
 
@@ -373,11 +476,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
-  );
+  return <AppContent />;
 }

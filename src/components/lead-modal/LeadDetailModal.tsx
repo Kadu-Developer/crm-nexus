@@ -221,6 +221,16 @@ export function LeadDetailModal({
                     <span className="font-mono text-slate-200">{opportunity.cnpj || '-'}</span>
                   </div>
                   <div>
+                    <span className="text-slate-500 block">Site</span>
+                    {opportunity.website ? (
+                      <a href={opportunity.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-blue-400 hover:text-blue-300">
+                        Acessar site <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="font-semibold text-slate-200">-</span>
+                    )}
+                  </div>
+                  <div>
                     <span className="text-slate-500 block">Segmento</span>
                     <span className="font-semibold text-slate-200 capitalize">{opportunity.segment}</span>
                   </div>
@@ -233,6 +243,14 @@ export function LeadDetailModal({
                   <div>
                     <span className="text-slate-500 block">Origem do Lead</span>
                     <span className="font-semibold text-slate-200 capitalize">{opportunity.leadSource}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Status do Pipeline</span>
+                    <span className="font-semibold text-slate-200">{STAGES.find((stage) => stage.id === opportunity.stage)?.title || opportunity.stage}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">Cadastrado em</span>
+                    <span className="font-semibold text-slate-200">{formatDate(opportunity.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -273,6 +291,12 @@ export function LeadDetailModal({
                           <Mail className="w-3.5 h-3.5 text-slate-500" />
                           <span>{c.email || '-'}</span>
                         </div>
+                        {c.linkedinUrl && (
+                          <a href={c.linkedinUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 justify-end text-blue-400 hover:text-blue-300">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>LinkedIn</span>
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -363,13 +387,20 @@ export function LeadDetailModal({
                         {opportunity.qualification?.urgencyLevel?.replace(/_/g, ' ')}
                       </span>
                     </div>
+
+                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
+                      <span className="text-[10px] text-slate-500 uppercase block">Potencial</span>
+                      <span className="font-bold text-blue-300 capitalize">
+                        {opportunity.qualification?.opportunityPotential || 'Não informado'}
+                      </span>
+                    </div>
                   </div>
 
                   {opportunity.qualification?.consultantNotes && (
                     <div className="pt-2">
                       <label className="text-slate-400 font-semibold block mb-1">Notas do Consultor</label>
                       <div className="p-3 bg-blue-950/20 border border-blue-800/40 rounded-lg text-blue-200 italic">
-                        "{opportunity.qualification.consultantNotes}"
+                        &quot;{opportunity.qualification.consultantNotes}&quot;
                       </div>
                     </div>
                   )}
@@ -458,7 +489,7 @@ export function LeadDetailModal({
                       <select
                         value={newActivity.activityType}
                         onChange={(e) =>
-                          setNewActivity({ ...newActivity, activityType: e.target.value as any })
+                          setNewActivity({ ...newActivity, activityType: e.target.value as Activity['activityType'] })
                         }
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
                       >

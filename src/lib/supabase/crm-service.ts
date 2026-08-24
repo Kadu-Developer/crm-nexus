@@ -1,6 +1,145 @@
 ﻿import { supabase } from './client';
-import { Opportunity, PipelineStage, Activity, Contact, Qualification, Segment, RevenueTier } from '@/types/crm';
+import { Opportunity, PipelineStage, Activity, Contact, Qualification, Segment, RevenueTier, DecisionInfluence } from '@/types/crm';
 import { INITIAL_OPPORTUNITIES, STAGES } from '@/lib/mock-data';
+
+const DEMO_OPPORTUNITIES_KEY = 'nexus_demo_opportunities';
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+async function getDemoOpportunities(): Promise<Opportunity[]> {
+  if (typeof window === 'undefined') return INITIAL_OPPORTUNITIES;
+
+  try {
+    const stored = localStorage.getItem(DEMO_OPPORTUNITIES_KEY);
+    const storedOpportunities = stored ? JSON.parse(stored) as Opportunity[] : [];
+
+    const sheetOpportunities = await getGoogleSheetOpportunities();
+    if (sheetOpportunities.length > 0) {
+      const existingKeys = new Set(storedOpportunities.map((opportunity) => opportunity.cnpj || opportunity.companyName.toLowerCase()));
+      const newSheetOpportunities = sheetOpportunities.filter((opportunity) => {
+        const key = opportunity.cnpj || opportunity.companyName.toLowerCase();
+        return !existingKeys.has(key);
+      });
+      const mergedOpportunities = [...storedOpportunities, ...newSheetOpportunities];
+      saveDemoOpportunities(mergedOpportunities);
+      return mergedOpportunities;
+    }
+    return storedOpportunities.length > 0 ? storedOpportunities : INITIAL_OPPORTUNITIES;
+  } catch {
+    return INITIAL_OPPORTUNITIES;
+  }
+}
+
+function saveDemoOpportunities(opportunities: Opportunity[]) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(DEMO_OPPORTUNITIES_KEY, JSON.stringify(opportunities));
+  }
+}
+
+function parseCsvRow(row: string): string[] {
+  const values: string[] = [];
+  let value = '';
+  let quoted = false;
+
+  for (let index = 0; index < row.length; index += 1) {
+    const character = row[index];
+    if (character === '"' && row[index + 1] === '"' && quoted) {
+      value += '"';
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === ',' && !quoted) {
+      values.push(value.trim());
+      value = '';
+    } else {
+      value += character;
+    }
+  }
+  values.push(value.trim());
+  return values;
+}
+
+function normalizeSheetValue(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function parseSheetDate(value: string): string {
+  const match = value.match(/(\d{2})\/(\d{2})\/(\d{4}).*?(\d{2}):(\d{2})/);
+  if (!match) return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  return new Date(`${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}:00`).toISOString();
+}
+
+function mapSheetRow(headers: string[], values: string[], index: number): Opportunity | null {
+  const row = Object.fromEntries(headers.map((header, headerIndex) => [normalizeSheetValue(header), values[headerIndex] || '']));
+  const companyName = row['razao social'];
+  const contactName = row['nome do contato'];
+  if (!companyName || !contactName) return null;
+
+  const segmentMap: Record<string, Segment> = { tecnologia: 'tecnologia', varejo: 'varejo_ecom', servicos: 'servicos', industria: 'industria', saude: 'saude', educacao: 'outro', financeiro: 'servicos' };
+  const sizeMap: Record<string, Opportunity['companySize']> = { mei: 'micro_1_9', microempresa: 'micro_1_9', pequena: 'pequena_10_49', media: 'media_50_199', grande: 'grande_200_mais' };
+  const sourceMap: Record<string, Opportunity['leadSource']> = { indicacao: 'indicacao', 'redes sociais': 'instagram', 'busca google': 'site', evento: 'evento', outros: 'outro' };
+  const stageMap: Record<string, PipelineStage> = { prospeccao: 'lead_identificado', 'reuniao agendada': 'pre_diag_agendado', 'proposta enviada': 'proposta_enviada', negociacao: 'negociacao', 'fechado ganho': 'fechado_ganho', 'fechado perdido': 'fechado_perdido' };
+  const consultantName = row['consultor responsavel'] || 'Tiago Santos';
+  const consultantId = normalizeSheetValue(consultantName).includes('ana') ? 'usr_ana' : 'usr_tiago';
+  const estimatedValue = Number((row['qual o valor estimado que o cliente pretende investir na solucao'] || '').replace(/[^0-9]/g, '')) || 30000;
+  const stage = stageMap[normalizeSheetValue(row['status do pipeline'])] || 'lead_identificado';
+  const probability = STAGES.find((definition) => definition.id === stage)?.defaultProbability || 5;
+  const opportunityId = `sheet_${index}_${normalizeSheetValue(companyName).replace(/[^a-z0-9]+/g, '-')}`;
+  const nextActionDate = parseSheetDate(row['data do proximo contato']);
+
+  return {
+    id: opportunityId,
+    companyName,
+    tradeName: row['nome fantasia'] || companyName,
+    cnpj: row.cnpj,
+    website: row.site,
+    segment: segmentMap[normalizeSheetValue(row.segmento)] || 'outro',
+    state: (row['estado (sigla de 2 caracteres)'] || 'SP').toUpperCase(),
+    city: row.cidade || 'Não informado',
+    companySize: sizeMap[normalizeSheetValue(row['porte da empresa'])] || 'media_50_199',
+    leadSource: sourceMap[normalizeSheetValue(row['origem do lead'])] || 'outro',
+    consultantId,
+    consultantName,
+    title: `Diagnóstico & Soluções - ${row['nome fantasia'] || companyName}`,
+    stage,
+    solutionService: 'Diagnóstico Comercial e Operacional Nexus',
+    estimatedValue,
+    proposedValue: estimatedValue,
+    probability,
+    weightedRevenue: estimatedValue * probability / 100,
+    estimatedCommission: estimatedValue * 0.1,
+    estimatedCloseDate: new Date().toISOString().slice(0, 10),
+    score: 50,
+    nextActionDescription: row['proximo passo'] || 'Agendar contato',
+    nextActionDate,
+    contacts: [{ id: `${opportunityId}_contact`, companyId: opportunityId, name: contactName, jobTitle: row.cargo || 'Contato', area: toContactArea(row.area), phone: row['telefone/whatsapp'], email: row['e-mail'], linkedinUrl: row.linkedin, isDecisionMaker: normalizeSheetValue(row['e decisor']) === 'sim', decisionInfluence: ['baixa', 'media', 'alta'].includes(normalizeSheetValue(row['influencia na decisao'])) ? normalizeSheetValue(row['influencia na decisao']) as DecisionInfluence : 'media' }],
+    qualification: { mainProblem: row['principal problema identificado'] || 'Ainda em mapeamento inicial', impactedArea: row.area || 'Geral', currentWorkflow: '', currentSystems: '', usesSpreadsheetsManual: false, hasUnintegratedSystems: false, mainBottleneck: '', hasBudget: 'desconhecido', urgencyLevel: 'media', opportunityPotential: 'medio', consultantNotes: row['observacoes do consultor'] },
+    activities: [],
+    createdAt: parseSheetDate(row['carimbo de data/hora']),
+    updatedAt: parseSheetDate(row['carimbo de data/hora']),
+  };
+}
+
+async function getGoogleSheetOpportunities(): Promise<Opportunity[]> {
+  if (typeof window === 'undefined') return [];
+  const imported: Opportunity[] = [];
+  try {
+    const response = await fetch('/api/google-sheets');
+    if (!response.ok) return imported;
+    const { sheets } = await response.json() as { sheets: string[] };
+    sheets.forEach((csv) => {
+      const lines = csv.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return;
+      const headers = parseCsvRow(lines[0]);
+      lines.slice(1).forEach((line, index) => {
+        const opportunity = mapSheetRow(headers, parseCsvRow(line), imported.length + index);
+        if (opportunity) imported.push(opportunity);
+      });
+    });
+  } catch {
+    // A planilha indisponível não impede o uso dos dados locais.
+  }
+  return imported;
+}
 
 // Helper para checar se uma string é UUID válido
 function isUUID(str?: string): boolean {
@@ -56,6 +195,11 @@ const toLeadSource = (val: string): Opportunity['leadSource'] => {
   return valid.includes(val) ? val as Opportunity['leadSource'] : 'outbound';
 };
 
+const toOpportunityPotential = (val: string): Qualification['opportunityPotential'] => {
+  const valid = ['baixo', 'medio', 'alto'];
+  return valid.includes(val) ? val as Qualification['opportunityPotential'] : 'medio';
+};
+
 const toPipelineStage = (val: string): PipelineStage => {
   const valid = [
     'lead_identificado', 'primeiro_contato', 'contato_realizado', 'pre_diag_agendado',
@@ -101,7 +245,7 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
         if (validUrgency.includes(urg)) return urg as Qualification['urgencyLevel'];
         return getNumber(qual, 'urgency_score') >= 4 ? 'alta' : 'media';
       })(),
-        opportunityPotential: getString(qual, 'opportunity_potential', 'alto'),
+        opportunityPotential: toOpportunityPotential(getString(qual, 'opportunity_potential', 'alto')),
         consultantNotes: getString(qual, 'consultant_notes') || getString(qual, 'notes'),
       }
     : {
@@ -180,8 +324,8 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
 export const crmService = {
   // 1. Listar oportunidades
   async getOpportunities(): Promise<Opportunity[]> {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      return INITIAL_OPPORTUNITIES;
+    if (isDemoMode || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
+      return getDemoOpportunities();
     }
 
     try {
@@ -216,7 +360,13 @@ export const crmService = {
   // 2. Atualizar estágio e probabilidade (Kanban Drag & Drop)
   async updateStage(oppId: string, newStage: PipelineStage, probability: number, weightedRevenue: number) {
     // Se for lead mock (ex: 'opp_1', 'opp_2') ou Supabase não configurado, atualização é apenas local
-    if (!isUUID(oppId) || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
+    if (isDemoMode || !isUUID(oppId) || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
+      if (isDemoMode) {
+        const updatedOpportunities = (await getDemoOpportunities()).map((opportunity) => opportunity.id === oppId
+          ? { ...opportunity, stage: newStage, probability, weightedRevenue, updatedAt: new Date().toISOString() }
+          : opportunity);
+        saveDemoOpportunities(updatedOpportunities);
+      }
       return { success: true };
     }
 
@@ -238,13 +388,20 @@ export const crmService = {
       }
       return { success: true };
     } catch (err) {
-      console.warn('Erro ao atualizar etapa no Supabase:', err?.message || err);
-      return { success: false, error: err?.message };
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Erro ao atualizar etapa no Supabase:', message);
+      return { success: false, error: message };
     }
   },
 
   // 3. Criar nova Oportunidade completa (Quick Capture)
   async createOpportunity(opp: Partial<Opportunity>, userId?: string) {
+    if (isDemoMode) {
+      const currentOpportunities = await getDemoOpportunities();
+      saveDemoOpportunities([...currentOpportunities, opp as Opportunity]);
+      return { success: true, data: opp };
+    }
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
       return { success: true, data: opp };
     }
@@ -265,6 +422,8 @@ export const crmService = {
         .insert({
           corporate_name: opp.companyName || 'Empresa',
           trade_name: opp.tradeName || opp.companyName || 'Empresa',
+          cnpj: opp.cnpj || null,
+          website: opp.website || null,
           segment: opp.segment || 'servicos',
           company_size: opp.companySize || 'media_50_199',
           estimated_revenue_tier: opp.estimatedRevenueTier || '15m_a_50m',
@@ -315,6 +474,7 @@ export const crmService = {
           area: c.area || 'diretoria_clevel',
           phone: c.phone || '',
           email: c.email || '',
+          linkedin_url: c.linkedinUrl || null,
           is_decision_maker: c.isDecisionMaker ?? true,
           decision_influence: c.decisionInfluence || 'alta',
         });
@@ -354,7 +514,8 @@ export const crmService = {
 
       return { success: true, id: oppData.id };
     } catch (err) {
-      console.warn('Erro ao persistir novo lead no Supabase:', err?.message || err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Erro ao persistir novo lead no Supabase:', message);
       return { success: true, data: opp };
     }
   },
@@ -388,7 +549,8 @@ export const crmService = {
 
       return { success: true };
     } catch (err) {
-      console.warn('Aviso ao salvar atividade no Supabase:', err?.message || err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('Aviso ao salvar atividade no Supabase:', message);
       return { success: true };
     }
   },

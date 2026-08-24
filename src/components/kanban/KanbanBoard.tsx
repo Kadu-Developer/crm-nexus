@@ -2,7 +2,6 @@
 
 import React, { useCallback } from 'react';
 import { Opportunity, PipelineStage } from '@/types/crm';
-import { STAGES } from '@/lib/mock-data';
 import { formatCurrency, formatDateTime, isActionOverdue, isActionToday } from '@/lib/utils';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import {
@@ -12,7 +11,53 @@ import {
   Building2,
   Flame,
   GripVertical,
+  TrendingUp,
 } from 'lucide-react';
+
+const PIPELINE_GROUPS: { id: string; title: string; stageIds: PipelineStage[]; dropStage: PipelineStage; color: string }[] = [
+  {
+    id: 'prospeccao',
+    title: 'Prospecção',
+    stageIds: ['lead_identificado', 'primeiro_contato', 'contato_realizado'],
+    dropStage: 'lead_identificado',
+    color: '#0757C9',
+  },
+  {
+    id: 'reuniao',
+    title: 'Reunião agendada',
+    stageIds: ['pre_diag_agendado', 'pre_diag_realizado'],
+    dropStage: 'pre_diag_agendado',
+    color: '#24C9FF',
+  },
+  {
+    id: 'qualificacao',
+    title: 'Qualificação',
+    stageIds: ['qualificado', 'diag_proposto', 'diag_contratado', 'diag_realizado'],
+    dropStage: 'qualificado',
+    color: '#7726D5',
+  },
+  {
+    id: 'proposta',
+    title: 'Proposta',
+    stageIds: ['solucao_identificada', 'proposta_enviada'],
+    dropStage: 'proposta_enviada',
+    color: '#ECAF24',
+  },
+  {
+    id: 'negociacao',
+    title: 'Negociação',
+    stageIds: ['negociacao'],
+    dropStage: 'negociacao',
+    color: '#F4510B',
+  },
+  {
+    id: 'conclusao',
+    title: 'Conclusão',
+    stageIds: ['fechado_ganho', 'fechado_perdido'],
+    dropStage: 'fechado_ganho',
+    color: '#059669',
+  },
+];
 
 interface KanbanBoardProps {
   opportunities: Opportunity[];
@@ -32,6 +77,18 @@ export function KanbanBoard({
     return opp.consultantId === consultantFilter;
   });
 
+  const totalValue = filteredOpportunities.reduce(
+    (total, opportunity) => total + (opportunity.proposedValue || opportunity.estimatedValue || 0),
+    0
+  );
+  const totalWeighted = filteredOpportunities.reduce(
+    (total, opportunity) => total + opportunity.weightedRevenue,
+    0
+  );
+  const attentionCount = filteredOpportunities.filter((opportunity) =>
+    isActionOverdue(opportunity.nextActionDate) || isActionToday(opportunity.nextActionDate)
+  ).length;
+
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -48,17 +105,15 @@ export function KanbanBoard({
         onSelectOpportunity(opp);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        const currentStageIndex = STAGES.findIndex((s) => s.id === stageId);
-        if (currentStageIndex < STAGES.length - 1) {
-          const nextStage = STAGES[currentStageIndex + 1].id;
-          onMoveStage(opp.id, nextStage);
+        const currentGroupIndex = PIPELINE_GROUPS.findIndex((group) => group.stageIds.includes(stageId));
+        if (currentGroupIndex < PIPELINE_GROUPS.length - 1) {
+          onMoveStage(opp.id, PIPELINE_GROUPS[currentGroupIndex + 1].dropStage);
         }
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        const currentStageIndex = STAGES.findIndex((s) => s.id === stageId);
-        if (currentStageIndex > 0) {
-          const prevStage = STAGES[currentStageIndex - 1].id;
-          onMoveStage(opp.id, prevStage);
+        const currentGroupIndex = PIPELINE_GROUPS.findIndex((group) => group.stageIds.includes(stageId));
+        if (currentGroupIndex > 0) {
+          onMoveStage(opp.id, PIPELINE_GROUPS[currentGroupIndex - 1].dropStage);
         }
       }
     },
@@ -67,9 +122,37 @@ export function KanbanBoard({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-6 pt-2 h-[calc(100vh-210px)] select-none">
-        {STAGES.map((stage) => {
-          const stageOpps = filteredOpportunities.filter((opp) => opp.stage === stage.id);
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <div>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#0757C9] dark:text-[#24C9FF]">
+            Operação comercial
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Pipeline de oportunidades</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Acompanhe cada negócio até o próximo passo.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+            <span className="mr-2 text-slate-500 dark:text-slate-400">Oportunidades</span>
+            <strong className="text-slate-900 dark:text-white">{filteredOpportunities.length}</strong>
+          </div>
+          <div className="border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+            <span className="mr-2 text-slate-500 dark:text-slate-400">Pipeline</span>
+            <strong className="text-slate-900 dark:text-white">{formatCurrency(totalValue)}</strong>
+          </div>
+          <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>Forecast {formatCurrency(totalWeighted)}</span>
+          </div>
+          {attentionCount > 0 && (
+            <div className="border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+              {attentionCount} {attentionCount === 1 ? 'ação pede' : 'ações pedem'} atenção
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-6 pt-1 h-[calc(100vh-220px)] min-h-[420px] select-none lg:grid lg:grid-cols-6 lg:overflow-x-hidden">
+        {PIPELINE_GROUPS.map((group) => {
+          const stageOpps = filteredOpportunities.filter((opp) => group.stageIds.includes(opp.stage));
           const stageTotal = stageOpps.reduce(
             (acc, curr) => acc + (curr.proposedValue || curr.estimatedValue || 0),
             0
@@ -78,22 +161,23 @@ export function KanbanBoard({
 
           return (
             <div
-              key={stage.id}
-              className="flex-shrink-0 w-72 flex flex-col bg-slate-900/60 dark:bg-slate-900/60 bg-white/80 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden backdrop-blur-md transition-colors"
+              key={group.id}
+              className="flex-shrink-0 w-72 flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors lg:w-auto lg:min-w-0"
             >
+              <div className="h-1 w-full" style={{ backgroundColor: group.color }} />
               {/* Header da Coluna */}
-              <div className="p-3.5 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/40">
+              <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 truncate">
                     <div
                       className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: stage.color }}
+                      style={{ backgroundColor: group.color }}
                     />
                     <span
                       className="font-bold text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate"
-                      title={stage.title}
+                      title={group.title}
                     >
-                      {stage.title}
+                      {group.title}
                     </span>
                   </div>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border border-slate-300 dark:border-slate-700">
@@ -109,7 +193,7 @@ export function KanbanBoard({
               </div>
 
               {/* Droppable Area */}
-              <Droppable droppableId={stage.id}>
+              <Droppable droppableId={group.dropStage}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
@@ -131,7 +215,7 @@ export function KanbanBoard({
                               ref={providedDrag.innerRef}
                               {...providedDrag.draggableProps}
                               onClick={() => onSelectOpportunity(opp)}
-                              onKeyDown={(e) => handleKeyDown(e, opp, stage.id as PipelineStage)}
+                              onKeyDown={(e) => handleKeyDown(e, opp, opp.stage)}
                               tabIndex={0}
                               aria-label={`Oportunidade: ${opp.tradeName || opp.companyName}. Próxima ação: ${opp.nextActionDescription}. ${opp.activities.length} interações.`}
                               className={`p-3.5 bg-white dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/60 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 ${
@@ -255,9 +339,9 @@ export function KanbanBoard({
                     {provided.placeholder}
 
                     {stageOpps.length === 0 && (
-                      <div className="h-28 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl text-xs text-slate-400 dark:text-slate-600 gap-1">
-                        <span>Nenhum lead</span>
-                        <span className="text-[10px] opacity-60">Arraste para cá</span>
+                      <div className="h-28 flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-400 dark:text-slate-500 gap-1">
+                        <span>Nenhuma oportunidade</span>
+                        <span className="text-[10px] opacity-70">Solte um card aqui</span>
                       </div>
                     )}
                   </div>

@@ -1,1 +1,36 @@
 @import "tailwindcss";
+@import "../../Nexus-Flow-Tech-Design-System/tokens/nexus-flow.tokens.css";
+
+:root {
+	--color-primary: var(--nft-color-blue);
+	--color-accent: var(--nft-color-orange);
+	--color-background: var(--nft-color-surface);
+	--color-foreground: var(--nft-color-graphite);
+	--color-border: var(--nft-color-border);
+	--font-ui: var(--font-inter), sans-serif;
+}
+
+* {
+	border-color: var(--color-border);
+}
+
+body {
+	background: var(--color-background);
+	color: var(--color-foreground);
+	font-family: var(--font-ui);
+}
+
+::selection {
+	background: #bfdbfe;
+	color: #1e3a8a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+	}
+}

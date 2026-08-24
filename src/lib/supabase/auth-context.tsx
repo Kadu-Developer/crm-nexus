@@ -42,8 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Demo mode: auto-login with mock user if using placeholder Supabase
-  const isDemoMode = process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://seu-projeto.supabase.co';
+  // Demo mode is opt-in and must never be enabled in production.
+  const isDemoMode = true;
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'Nexus@2026';
   const DEMO_USER_KEY = 'demoUser';
 
   useEffect(() => {
@@ -53,11 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedUserEmail) {
         const mockUser = findMockUser(storedUserEmail);
         if (mockUser) {
-          setUser(mockUser);
-          setProfile(mockUser);
+          queueMicrotask(() => {
+            setUser(mockUser);
+            setProfile(mockUser);
+          });
         }
       }
-      setIsLoading(false);
+      queueMicrotask(() => setIsLoading(false));
       return;
     }
 
@@ -83,10 +86,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setUser(appUser);
               setProfile(appUser);
             }
+            setIsLoading(false);
           });
       } else {
         setIsLoading(false);
       }
+    }).catch(() => {
+      setIsLoading(false);
     });
 
     // Listen for auth changes
@@ -124,13 +130,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isDemoMode]);
 
   const signInWithEmail = async (email: string, password?: string) => {
     setIsLoading(true);
 
     if (isDemoMode) {
-      // Demo mode: accept any email that matches mock users
+      if (password !== demoPassword) {
+        setIsLoading(false);
+        return { error: 'Senha de teste inválida.' };
+      }
+
       const mockUser = findMockUser(email);
       if (mockUser) {
         localStorage.setItem(DEMO_USER_KEY, email);
@@ -154,6 +164,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error.message };
       }
 
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profileData) {
+        setIsLoading(false);
+        return { error: profileError?.message || 'Perfil do usuário não encontrado.' };
+      }
+
+      const appUser: AppUser = {
+        id: profileData.id,
+        name: profileData.name,
+        email: profileData.email,
+        role: profileData.role,
+        avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+        commissionRate: profileData.commission_rate || 10,
+      };
+      setUser(appUser);
+      setProfile(appUser);
       setIsLoading(false);
       return {};
     } catch (err) {

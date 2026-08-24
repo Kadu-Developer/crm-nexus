@@ -1,6 +1,14 @@
-﻿import { PipelineStage, StageDefinition, StageMacroPhase, Opportunity, User } from '@/types/crm';
+import { PipelineStage, StageDefinition, StageMacroPhase, Opportunity, User } from '@/types/crm';
 
 export const USERS: User[] = [
+  {
+    id: 'usr_carlos',
+    name: 'Carlos Eduardo',
+    email: 'carlos@nexustechflow.com.br',
+    role: 'admin_ceo',
+    avatar: 'CE',
+    commissionRate: 0,
+  },
   {
     id: 'usr_tiago',
     name: 'Tiago Santos',
