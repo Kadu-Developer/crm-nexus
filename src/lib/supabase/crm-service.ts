@@ -1,9 +1,8 @@
-﻿import { supabase } from './client';
+import { supabase } from './client';
 import { Opportunity, PipelineStage, Activity, Contact, Qualification, Segment, RevenueTier, DecisionInfluence } from '@/types/crm';
-import { INITIAL_OPPORTUNITIES, STAGES } from '@/lib/mock-data';
+import { INITIAL_OPPORTUNITIES } from '@/lib/mock-data';
 
 const DEMO_OPPORTUNITIES_KEY = 'nexus_demo_opportunities';
-const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 async function getDemoOpportunities(): Promise<Opportunity[]> {
   if (typeof window === 'undefined') return INITIAL_OPPORTUNITIES;
@@ -78,44 +77,63 @@ function mapSheetRow(headers: string[], values: string[], index: number): Opport
   const sizeMap: Record<string, Opportunity['companySize']> = { mei: 'micro_1_9', microempresa: 'micro_1_9', pequena: 'pequena_10_49', media: 'media_50_199', grande: 'grande_200_mais' };
   const sourceMap: Record<string, Opportunity['leadSource']> = { indicacao: 'indicacao', 'redes sociais': 'instagram', 'busca google': 'site', evento: 'evento', outros: 'outro' };
   const stageMap: Record<string, PipelineStage> = { prospeccao: 'lead_identificado', 'reuniao agendada': 'pre_diag_agendado', 'proposta enviada': 'proposta_enviada', negociacao: 'negociacao', 'fechado ganho': 'fechado_ganho', 'fechado perdido': 'fechado_perdido' };
-  const consultantName = row['consultor responsavel'] || 'Tiago Santos';
-  const consultantId = normalizeSheetValue(consultantName).includes('ana') ? 'usr_ana' : 'usr_tiago';
-  const estimatedValue = Number((row['qual o valor estimado que o cliente pretende investir na solucao'] || '').replace(/[^0-9]/g, '')) || 30000;
-  const stage = stageMap[normalizeSheetValue(row['status do pipeline'])] || 'lead_identificado';
-  const probability = STAGES.find((definition) => definition.id === stage)?.defaultProbability || 5;
-  const opportunityId = `sheet_${index}_${normalizeSheetValue(companyName).replace(/[^a-z0-9]+/g, '-')}`;
-  const nextActionDate = parseSheetDate(row['data do proximo contato']);
 
   return {
-    id: opportunityId,
+    id: `sheet_lead_${index + 1}`,
     companyName,
     tradeName: row['nome fantasia'] || companyName,
-    cnpj: row.cnpj,
-    website: row.site,
-    segment: segmentMap[normalizeSheetValue(row.segmento)] || 'outro',
-    state: (row['estado (sigla de 2 caracteres)'] || 'SP').toUpperCase(),
-    city: row.cidade || 'Não informado',
-    companySize: sizeMap[normalizeSheetValue(row['porte da empresa'])] || 'media_50_199',
-    leadSource: sourceMap[normalizeSheetValue(row['origem do lead'])] || 'outro',
-    consultantId,
-    consultantName,
-    title: `Diagnóstico & Soluções - ${row['nome fantasia'] || companyName}`,
-    stage,
-    solutionService: 'Diagnóstico Comercial e Operacional Nexus',
-    estimatedValue,
-    proposedValue: estimatedValue,
-    probability,
-    weightedRevenue: estimatedValue * probability / 100,
-    estimatedCommission: estimatedValue * 0.1,
-    estimatedCloseDate: new Date().toISOString().slice(0, 10),
-    score: 50,
-    nextActionDescription: row['proximo passo'] || 'Agendar contato',
-    nextActionDate,
-    contacts: [{ id: `${opportunityId}_contact`, companyId: opportunityId, name: contactName, jobTitle: row.cargo || 'Contato', area: toContactArea(row.area), phone: row['telefone/whatsapp'], email: row['e-mail'], linkedinUrl: row.linkedin, isDecisionMaker: normalizeSheetValue(row['e decisor']) === 'sim', decisionInfluence: ['baixa', 'media', 'alta'].includes(normalizeSheetValue(row['influencia na decisao'])) ? normalizeSheetValue(row['influencia na decisao']) as DecisionInfluence : 'media' }],
-    qualification: { mainProblem: row['principal problema identificado'] || 'Ainda em mapeamento inicial', impactedArea: row.area || 'Geral', currentWorkflow: '', currentSystems: '', usesSpreadsheetsManual: false, hasUnintegratedSystems: false, mainBottleneck: '', hasBudget: 'desconhecido', urgencyLevel: 'media', opportunityPotential: 'medio', consultantNotes: row['observacoes do consultor'] },
+    cnpj: row['cnpj'] || undefined,
+    website: row['site'] || undefined,
+    segment: segmentMap[normalizeSheetValue(row['segmento'])] || 'servicos',
+    state: row['estado'] || 'SP',
+    city: row['cidade'] || 'São Paulo',
+    companySize: sizeMap[normalizeSheetValue(row['porte'])] || 'media_50_199',
+    employeeCount: Number(row['numero de funcionarios']) || undefined,
+    estimatedRevenueTier: '15m_a_50m',
+    leadSource: sourceMap[normalizeSheetValue(row['origem'])] || 'outbound',
+    consultantId: 'usr_carlos',
+    consultantName: 'Carlos Eduardo',
+    title: `Diagnóstico de Processos - ${companyName}`,
+    stage: stageMap[normalizeSheetValue(row['status do lead'])] || 'lead_identificado',
+    solutionService: 'Diagnóstico & Estruturação Comercial',
+    probability: 25,
+    estimatedValue: Number(row['valor estimado']) || 35000,
+    proposedValue: Number(row['valor estimado']) || 35000,
+    weightedRevenue: (Number(row['valor estimado']) || 35000) * 0.25,
+    estimatedCommission: ((Number(row['valor estimado']) || 35000) * 0.25) * 0.1,
+    estimatedCloseDate: parseSheetDate(row['data e hora da reuniao'] || '').split('T')[0],
+    score: 65,
+    nextActionDescription: row['observacoes / dor principal'] || 'Realizar contato de qualificação',
+    nextActionDate: parseSheetDate(row['data e hora da reuniao'] || ''),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    contacts: [
+      {
+        id: `cnt_sheet_${index + 1}`,
+        companyId: `sheet_lead_${index + 1}`,
+        name: contactName,
+        jobTitle: row['cargo do contato'] || 'Executivo',
+        area: 'diretoria_clevel',
+        phone: row['telefone / whatsapp'] || '',
+        email: row['e-mail'] || '',
+        isDecisionMaker: true,
+        decisionInfluence: 'alta',
+      },
+    ],
+    qualification: {
+      mainProblem: row['observacoes / dor principal'] || 'Mapeamento inicial de processos e automação',
+      impactedArea: 'Operações e Comercial',
+      currentWorkflow: 'Processos manuais',
+      currentSystems: 'Sistemas legados',
+      usesSpreadsheetsManual: true,
+      hasUnintegratedSystems: true,
+      mainBottleneck: 'Falta de visibilidade e automação',
+      hasBudget: 'verba_em_definicao',
+      urgencyLevel: 'alta',
+      opportunityPotential: 'alto',
+      consultantNotes: row['observacoes / dor principal'] || '',
+    },
     activities: [],
-    createdAt: parseSheetDate(row['carimbo de data/hora']),
-    updatedAt: parseSheetDate(row['carimbo de data/hora']),
   };
 }
 
@@ -136,19 +154,17 @@ async function getGoogleSheetOpportunities(): Promise<Opportunity[]> {
       });
     });
   } catch {
-    // A planilha indisponível não impede o uso dos dados locais.
+    // Silently fall back
   }
   return imported;
 }
 
-// Helper para checar se uma string é UUID válido
 function isUUID(str?: string): boolean {
   if (!str) return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 }
 
-// Helper para converter registro do Supabase para formato Opportunity do frontend
 type SupabaseRow = Record<string, unknown>;
 
 const getString = (obj: SupabaseRow, key: string, fallback = ''): string =>
@@ -221,10 +237,10 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
     email: getString(c, 'email'),
     isDecisionMaker: getBool(c, 'is_decision_maker', true),
     decisionInfluence: (() => {
-        const inf = getString(c, 'decision_influence') || getString(c, 'influence_level');
-        const validInfluence = ['baixa', 'media', 'alta'];
-        return validInfluence.includes(inf) ? inf as DecisionInfluence : 'media';
-      })(),
+      const inf = getString(c, 'decision_influence') || getString(c, 'influence_level');
+      const validInfluence = ['baixa', 'media', 'alta'];
+      return validInfluence.includes(inf) ? inf as DecisionInfluence : 'media';
+    })(),
   }));
 
   const qual = (row.qualification as SupabaseRow) || {};
@@ -238,35 +254,36 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
         hasUnintegratedSystems: getBool(qual, 'has_unintegrated_systems', getBool(qual, 'unintegrated_systems', true)),
         mainBottleneck: getString(qual, 'main_bottleneck') || getString(qual, 'bottleneck_details', 'Falta de integração'),
         estimatedImpactCost: getString(qual, 'estimated_impact_cost') || (getString(qual, 'estimated_monthly_loss') ? `R$ ${getString(qual, 'estimated_monthly_loss')}/mês` : undefined),
-        hasBudget: toBudgetStatus(getString(qual, 'has_budget') || (getBool(qual, 'has_budget_confirmed') ? 'sim_confirmado' : 'verba_em_definicao')),
+        hasBudget: toBudgetStatus(getString(qual, 'has_budget')),
         urgencyLevel: (() => {
-        const urg = getString(qual, 'urgency_level');
-        const validUrgency = ['baixa', 'media', 'alta', 'critica_imediata'];
-        if (validUrgency.includes(urg)) return urg as Qualification['urgencyLevel'];
-        return getNumber(qual, 'urgency_score') >= 4 ? 'alta' : 'media';
-      })(),
-        opportunityPotential: toOpportunityPotential(getString(qual, 'opportunity_potential', 'alto')),
-        consultantNotes: getString(qual, 'consultant_notes') || getString(qual, 'notes'),
+          const u = getString(qual, 'urgency_level');
+          const valid = ['baixa', 'media', 'alta', 'critica_imediata'];
+          return valid.includes(u) ? u as Qualification['urgencyLevel'] : 'alta';
+        })(),
+        desiredTimeline: getString(qual, 'desired_timeline'),
+        competitorSupplier: getString(qual, 'competitor_supplier'),
+        opportunityPotential: toOpportunityPotential(getString(qual, 'opportunity_potential')),
+        consultantNotes: getString(qual, 'consultant_notes'),
       }
     : {
-        mainProblem: 'Gargalos de processos e dados dispersos',
-        impactedArea: 'Operações e Comercial',
-        currentWorkflow: 'Planilhas manuais',
-        currentSystems: 'Sistemas legados não integrados',
-        usesSpreadsheetsManual: true,
-        hasUnintegratedSystems: true,
-        mainBottleneck: 'Falta de visibilidade executiva',
-        hasBudget: 'verba_em_definicao',
-        urgencyLevel: 'alta',
-        opportunityPotential: 'alto',
+        mainProblem: 'Qualificação pendente',
+        impactedArea: 'A definir',
+        currentWorkflow: 'Não informado',
+        currentSystems: 'Não informado',
+        usesSpreadsheetsManual: false,
+        hasUnintegratedSystems: false,
+        mainBottleneck: 'A definir',
+        hasBudget: 'desconhecido',
+        urgencyLevel: 'media',
+        opportunityPotential: 'medio',
       };
 
   const activities: Activity[] = ((row.activities as SupabaseRow[]) || []).map((a: SupabaseRow) => ({
     id: getString(a, 'id'),
-    opportunityId: getString(row, 'id'),
-    consultantId: getString(row, 'consultant_id', 'usr_tiago'),
+    opportunityId: getString(a, 'opportunity_id', getString(row, 'id')),
+    consultantId: getString(a, 'consultant_id', getString(row, 'consultant_id')),
     activityType: toActivityType(getString(a, 'activity_type') || getString(a, 'type', 'reuniao')),
-    summary: getString(a, 'summary') || getString(a, 'title', 'Reunião Realizada'),
+    summary: getString(a, 'summary') || getString(a, 'title', 'Atividade comercial'),
     resultDetails: getString(a, 'result_details') || getString(a, 'description'),
     performedAt: getString(a, 'performed_at') || getString(a, 'scheduled_at') || getString(a, 'created_at', new Date().toISOString()),
     nextAction: getString(a, 'next_action') || getString(row, 'next_action_description', 'Follow-up'),
@@ -287,8 +304,8 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
     estimatedRevenueTier: toRevenueTier(getString(company, 'estimated_revenue_tier') || getString(company, 'revenue_tier', '15m_a_50m')),
     leadSource: toLeadSource(getString(company, 'lead_source', 'outbound')),
     consultantId: getString(row, 'consultant_id'),
-    consultantName: getString((row.consultant as SupabaseRow) || {}, 'name', 'Consultor Nexus'),
-    title: getString(row, 'title') || `Consultoria Estratégica - ${getString(company, 'trade_name', 'Empresa')}`,
+    consultantName: getString((row.consultant as SupabaseRow) || {}, 'name', 'Carlos Eduardo'),
+    title: getString(row, 'title') || `Consultoria - ${getString(company, 'trade_name', 'Empresa')}`,
     stage: toPipelineStage(getString(row, 'stage', 'lead_identificado')),
     lostReason: getString(row, 'lost_reason'),
     solutionService: getString(row, 'solution_service', 'Diagnóstico & Estruturação Comercial'),
@@ -303,31 +320,15 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
     nextActionDate: getString(row, 'next_action_date', new Date().toISOString()),
     createdAt: getString(row, 'created_at', new Date().toISOString()),
     updatedAt: getString(row, 'updated_at', new Date().toISOString()),
-    contacts: contacts.length > 0 ? contacts : [
-      {
-        id: 'c1',
-        companyId: getString(row, 'company_id', 'comp_1'),
-        name: 'Contato Principal',
-        jobTitle: 'Diretor Geral',
-        area: 'diretoria_clevel',
-        phone: '',
-        email: '',
-        isDecisionMaker: true,
-        decisionInfluence: 'alta',
-      }
-    ],
+    contacts: contacts.length > 0 ? contacts : [],
     qualification,
     activities,
   };
 }
 
 export const crmService = {
-  // 1. Listar oportunidades
+  // 1. Listar oportunidades (Supabase ➔ Google Sheets / Local)
   async getOpportunities(): Promise<Opportunity[]> {
-    if (isDemoMode || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      return getDemoOpportunities();
-    }
-
     try {
       const { data, error } = await supabase
         .from('opportunities')
@@ -341,250 +342,297 @@ export const crmService = {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.warn('Supabase query error (usando mock data inicial):', error.message || error);
-        return INITIAL_OPPORTUNITIES;
+      if (!error && data && data.length > 0) {
+        return data.map(mapSupabaseToOpportunity);
       }
-
-      if (!data || data.length === 0) {
-        return INITIAL_OPPORTUNITIES;
-      }
-
-      return data.map(mapSupabaseToOpportunity);
     } catch (err) {
-      console.warn('Conexão Supabase indisponível, operando com dados locais:', err);
-      return INITIAL_OPPORTUNITIES;
+      console.warn('Conexão Supabase query falhou:', err);
     }
+
+    return getDemoOpportunities();
   },
 
   // 2. Atualizar estágio e probabilidade (Kanban Drag & Drop)
   async updateStage(oppId: string, newStage: PipelineStage, probability: number, weightedRevenue: number) {
-    // Se for lead mock (ex: 'opp_1', 'opp_2') ou Supabase não configurado, atualização é apenas local
-    if (isDemoMode || !isUUID(oppId) || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      if (isDemoMode) {
-        const updatedOpportunities = (await getDemoOpportunities()).map((opportunity) => opportunity.id === oppId
-          ? { ...opportunity, stage: newStage, probability, weightedRevenue, updatedAt: new Date().toISOString() }
-          : opportunity);
-        saveDemoOpportunities(updatedOpportunities);
-      }
-      return { success: true };
-    }
-
     try {
-      // Nota: weighted_revenue é coluna calculada (GENERATED ALWAYS) no Postgres, não enviamos diretamente
-      const { error } = await supabase
-        .from('opportunities')
-        .update({
-          stage: newStage,
-          probability: probability,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', oppId);
+      if (isUUID(oppId)) {
+        const { error } = await supabase
+          .from('opportunities')
+          .update({
+            stage: newStage,
+            probability: probability,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', oppId);
 
-      if (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.warn('Aviso ao sincronizar estágio no Supabase:', msg);
-        return { success: false, error: msg };
+        if (!error) return { success: true };
       }
-      return { success: true };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn('Erro ao atualizar etapa no Supabase:', message);
-      return { success: false, error: message };
+      console.warn('Erro ao atualizar etapa no Supabase:', err);
     }
+
+    // Atualização local de fallback
+    const current = await getDemoOpportunities();
+    const updated = current.map((o) => (o.id === oppId ? { ...o, stage: newStage, probability, weightedRevenue, updatedAt: new Date().toISOString() } : o));
+    saveDemoOpportunities(updated);
+    return { success: true };
   },
 
   // 3. Criar nova Oportunidade completa (Quick Capture)
   async createOpportunity(opp: Partial<Opportunity>, userId?: string) {
-    if (isDemoMode) {
-      const currentOpportunities = await getDemoOpportunities();
-      saveDemoOpportunities([...currentOpportunities, opp as Opportunity]);
-      return { success: true, data: opp };
-    }
-
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      return { success: true, data: opp };
-    }
-
     try {
-      // 1. Obter usuário atual autenticado ou perfil
+      // 1. Obter usuário autenticado
       const { data: authUser } = await supabase.auth.getUser();
       const validUserId = authUser?.user?.id || (isUUID(userId) ? userId : null);
 
-      if (!validUserId) {
-        console.warn('Nenhum usuário autenticado com UUID do Supabase. O lead foi salvo localmente.');
-        return { success: true, data: opp };
-      }
-
-      // 2. Inserir Empresa
-      const { data: compData, error: compErr } = await supabase
-        .from('companies')
-        .insert({
-          corporate_name: opp.companyName || 'Empresa',
-          trade_name: opp.tradeName || opp.companyName || 'Empresa',
-          cnpj: opp.cnpj || null,
-          website: opp.website || null,
-          segment: opp.segment || 'servicos',
-          company_size: opp.companySize || 'media_50_199',
-          estimated_revenue_tier: opp.estimatedRevenueTier || '15m_a_50m',
-          lead_source: opp.leadSource || 'outbound',
-          assigned_consultant_id: validUserId,
-        })
-        .select()
-        .single();
-
-      if (compErr) {
-        console.warn('Aviso ao criar empresa no Supabase:', compErr.message);
-        return { success: true, data: opp };
-      }
-
-      const companyId = compData.id;
-
-      // 3. Inserir Oportunidade
-      const { data: oppData, error: oppErr } = await supabase
-        .from('opportunities')
-        .insert({
-          company_id: companyId,
-          consultant_id: validUserId,
-          title: opp.title || `Consultoria Estratégica - ${opp.tradeName || opp.companyName}`,
-          stage: opp.stage || 'lead_identificado',
-          solution_service: opp.solutionService || 'Diagnóstico & Estruturação Comercial',
-          probability: opp.probability || 10,
-          estimated_value: opp.estimatedValue || 30000,
-          proposed_value: opp.proposedValue || opp.estimatedValue || 30000,
-          score: opp.score || 50,
-          next_action_description: opp.nextActionDescription || 'Agendar contato',
-          next_action_date: opp.nextActionDate || new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (oppErr) {
-        console.warn('Aviso ao criar oportunidade no Supabase:', oppErr.message);
-        return { success: true, data: opp };
-      }
-
-      // 4. Inserir Contato Principal
-      if (opp.contacts && opp.contacts.length > 0) {
-        const c = opp.contacts[0];
-        await supabase.from('contacts').insert({
-          company_id: companyId,
-          name: c.name || 'Contato Principal',
-          job_title: c.jobTitle || 'Diretor',
-          area: c.area || 'diretoria_clevel',
-          phone: c.phone || '',
-          email: c.email || '',
-          linkedin_url: c.linkedinUrl || null,
-          is_decision_maker: c.isDecisionMaker ?? true,
-          decision_influence: c.decisionInfluence || 'alta',
-        });
-      }
-
-      // 5. Inserir Qualificação
-      if (opp.qualification) {
-        const q = opp.qualification;
-        await supabase.from('qualifications').insert({
-          opportunity_id: oppData.id,
-          main_problem: q.mainProblem,
-          impacted_area: q.impactedArea,
-          current_workflow: q.currentWorkflow,
-          current_systems: q.currentSystems,
-          has_unintegrated_systems: q.hasUnintegratedSystems,
-          uses_spreadsheets_manual: q.usesSpreadsheetsManual,
-          main_bottleneck: q.mainBottleneck,
-          has_budget: q.hasBudget,
-          urgency_level: q.urgencyLevel,
-          consultant_notes: q.consultantNotes,
-        });
-      }
-
-      // 6. Inserir Primeira Atividade se houver
-      if (opp.activities && opp.activities.length > 0) {
-        const a = opp.activities[0];
-        await supabase.from('activities').insert({
-          opportunity_id: oppData.id,
-          company_id: companyId,
-          activity_type: a.activityType || 'reuniao',
-          summary: a.summary || 'Primeiro Contato',
-          result_details: a.resultDetails || '',
-          next_action: a.nextAction,
-          next_action_date: a.nextActionDate,
-        });
-      }
-
-      return { success: true, id: oppData.id };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn('Erro ao persistir novo lead no Supabase:', message);
-      return { success: true, data: opp };
-    }
-  },
-
-  // 4. Inserir Atividade na timeline
-  async addActivity(oppId: string, act: Activity) {
-    if (!isUUID(oppId) || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      return { success: true };
-    }
-
-    try {
-      await supabase.from('activities').insert({
-        opportunity_id: oppId,
-        activity_type: act.activityType,
-        summary: act.summary,
-        result_details: act.resultDetails,
-        next_action: act.nextAction,
-        next_action_date: act.nextActionDate,
-      });
-
-      if (act.nextAction && act.nextActionDate) {
-        await supabase
-          .from('opportunities')
-          .update({
-            next_action_description: act.nextAction,
-            next_action_date: act.nextActionDate,
-            updated_at: new Date().toISOString(),
+      if (validUserId) {
+        // 2. Inserir Empresa
+        const { data: compData, error: compErr } = await supabase
+          .from('companies')
+          .insert({
+            corporate_name: opp.companyName || 'Empresa',
+            trade_name: opp.tradeName || opp.companyName || 'Empresa',
+            cnpj: opp.cnpj || null,
+            website: opp.website || null,
+            segment: opp.segment || 'servicos',
+            company_size: opp.companySize || 'media_50_199',
+            estimated_revenue_tier: opp.estimatedRevenueTier || '15m_a_50m',
+            lead_source: opp.leadSource || 'outbound',
+            assigned_consultant_id: validUserId,
           })
-          .eq('id', oppId);
-      }
+          .select()
+          .single();
 
-      return { success: true };
+        if (!compErr && compData) {
+          const companyId = compData.id;
+
+          // 3. Inserir Oportunidade
+          const { data: oppData, error: oppErr } = await supabase
+            .from('opportunities')
+            .insert({
+              company_id: companyId,
+              consultant_id: validUserId,
+              title: opp.title || `Consultoria - ${opp.tradeName || opp.companyName}`,
+              stage: opp.stage || 'lead_identificado',
+              solution_service: opp.solutionService || 'Diagnóstico & Estruturação Comercial',
+              probability: opp.probability || 10,
+              estimated_value: opp.estimatedValue || 30000,
+              proposed_value: opp.proposedValue || opp.estimatedValue || 30000,
+              score: opp.score || 50,
+              next_action_description: opp.nextActionDescription || 'Agendar contato',
+              next_action_date: opp.nextActionDate || new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (!oppErr && oppData) {
+            // 4. Inserir Contato
+            if (opp.contacts && opp.contacts.length > 0) {
+              const c = opp.contacts[0];
+              await supabase.from('contacts').insert({
+                company_id: companyId,
+                name: c.name || 'Contato Principal',
+                job_title: c.jobTitle || 'Diretor',
+                area: c.area || 'diretoria_clevel',
+                phone: c.phone || '',
+                email: c.email || '',
+                linkedin_url: c.linkedinUrl || null,
+                is_decision_maker: c.isDecisionMaker ?? true,
+                decision_influence: c.decisionInfluence || 'alta',
+              });
+            }
+
+            // 5. Inserir Qualificação
+            if (opp.qualification) {
+              const q = opp.qualification;
+              await supabase.from('qualifications').insert({
+                opportunity_id: oppData.id,
+                main_problem: q.mainProblem,
+                impacted_area: q.impactedArea,
+                current_workflow: q.currentWorkflow,
+                current_systems: q.currentSystems,
+                has_unintegrated_systems: q.hasUnintegratedSystems,
+                uses_spreadsheets_manual: q.usesSpreadsheetsManual,
+                main_bottleneck: q.mainBottleneck,
+                has_budget: q.hasBudget,
+                urgency_level: q.urgencyLevel,
+                consultant_notes: q.consultantNotes,
+              });
+            }
+
+            return { success: true, data: { ...opp, id: oppData.id } };
+          }
+        }
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.warn('Aviso ao salvar atividade no Supabase:', message);
-      return { success: true };
+      console.warn('Erro ao inserir lead no Supabase:', err);
     }
+
+    // Fallback local
+    const currentOpportunities = await getDemoOpportunities();
+    const newLocalOpp: Opportunity = {
+      ...opp,
+      id: `lead_${Date.now()}`,
+      companyName: opp.companyName || 'Empresa',
+      tradeName: opp.tradeName || opp.companyName || 'Empresa',
+      segment: opp.segment || 'servicos',
+      state: opp.state || 'SP',
+      city: opp.city || 'São Paulo',
+      companySize: opp.companySize || 'media_50_199',
+      leadSource: opp.leadSource || 'outbound',
+      consultantId: opp.consultantId || 'usr_carlos',
+      consultantName: opp.consultantName || 'Carlos Eduardo',
+      title: opp.title || `Consultoria - ${opp.tradeName || opp.companyName}`,
+      stage: opp.stage || 'lead_identificado',
+      solutionService: opp.solutionService || 'Diagnóstico & Estruturação Comercial',
+      probability: opp.probability || 10,
+      estimatedValue: opp.estimatedValue || 30000,
+      proposedValue: opp.proposedValue || 30000,
+      weightedRevenue: (opp.estimatedValue || 30000) * 0.1,
+      estimatedCommission: (opp.estimatedValue || 30000) * 0.01,
+      estimatedCloseDate: opp.estimatedCloseDate || new Date().toISOString().split('T')[0],
+      score: opp.score || 50,
+      nextActionDescription: opp.nextActionDescription || 'Agendar alinhamento',
+      nextActionDate: opp.nextActionDate || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      contacts: opp.contacts || [],
+      qualification: opp.qualification || {
+        mainProblem: 'Mapeamento pendente',
+        impactedArea: 'A definir',
+        currentWorkflow: 'Manual',
+        currentSystems: 'Nenhum',
+        usesSpreadsheetsManual: true,
+        hasUnintegratedSystems: false,
+        mainBottleneck: 'A definir',
+        hasBudget: 'desconhecido',
+        urgencyLevel: 'media',
+        opportunityPotential: 'medio',
+      },
+      activities: [],
+    };
+    saveDemoOpportunities([...currentOpportunities, newLocalOpp]);
+    return { success: true, data: newLocalOpp };
   },
 
-  // 5. Configurar Realtime Sync
-  subscribeToChanges(callback: () => void) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder-project')) {
-      return () => {};
-    }
-
+  // 4. Adicionar Atividade
+  async addActivity(oppId: string, activity: Omit<Activity, 'id' | 'performedAt'>, userId?: string) {
     try {
-      const channel = supabase
-        .channel('crm-realtime-channel')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'opportunities' },
-          () => {
-            callback();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'activities' },
-          () => {
-            callback();
-          }
-        )
-        .subscribe();
+      if (isUUID(oppId)) {
+        const { data: authUser } = await supabase.auth.getUser();
+        const validUserId = authUser?.user?.id || (isUUID(userId) ? userId : null);
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    } catch (e) {
-      return () => {};
+        if (validUserId) {
+          await supabase.from('activities').insert({
+            opportunity_id: oppId,
+            consultant_id: validUserId,
+            activity_type: activity.activityType,
+            summary: activity.summary,
+            result_details: activity.resultDetails,
+            next_action: activity.nextAction,
+            next_action_date: activity.nextActionDate,
+          });
+
+          if (activity.nextAction && activity.nextActionDate) {
+            await supabase
+              .from('opportunities')
+              .update({
+                next_action_description: activity.nextAction,
+                next_action_date: activity.nextActionDate,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', oppId);
+          }
+
+          return { success: true };
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao adicionar atividade no Supabase:', err);
     }
+
+    const currentOpportunities = await getDemoOpportunities();
+    const newAct: Activity = {
+      ...activity,
+      id: `act_${Date.now()}`,
+      opportunityId: oppId,
+      performedAt: new Date().toISOString(),
+    };
+    const updatedOpportunities = currentOpportunities.map((opportunity) => {
+      if (opportunity.id === oppId) {
+        return {
+          ...opportunity,
+          activities: [newAct, ...opportunity.activities],
+          nextActionDescription: activity.nextAction || opportunity.nextActionDescription,
+          nextActionDate: activity.nextActionDate || opportunity.nextActionDate,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return opportunity;
+    });
+    saveDemoOpportunities(updatedOpportunities);
+    return { success: true };
+  },
+
+  // 5. Atualizar Qualificação
+  async updateQualification(oppId: string, qual: Partial<Qualification>) {
+    try {
+      if (isUUID(oppId)) {
+        await supabase
+          .from('qualifications')
+          .update({
+            main_problem: qual.mainProblem,
+            impacted_area: qual.impactedArea,
+            current_workflow: qual.currentWorkflow,
+            current_systems: qual.currentSystems,
+            uses_spreadsheets_manual: qual.usesSpreadsheetsManual,
+            has_unintegrated_systems: qual.hasUnintegratedSystems,
+            main_bottleneck: qual.mainBottleneck,
+            estimated_impact_cost: qual.estimatedImpactCost,
+            has_budget: qual.hasBudget,
+            urgency_level: qual.urgencyLevel,
+            desired_timeline: qual.desiredTimeline,
+            competitor_supplier: qual.competitorSupplier,
+            opportunity_potential: qual.opportunityPotential,
+            consultant_notes: qual.consultantNotes,
+          })
+          .eq('opportunity_id', oppId);
+
+        return { success: true };
+      }
+    } catch (err) {
+      console.warn('Erro ao atualizar qualificação no Supabase:', err);
+    }
+
+    const currentOpportunities = await getDemoOpportunities();
+    const updatedOpportunities = currentOpportunities.map((opportunity) => {
+      if (opportunity.id === oppId) {
+        return {
+          ...opportunity,
+          qualification: { ...opportunity.qualification, ...qual },
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return opportunity;
+    });
+    saveDemoOpportunities(updatedOpportunities);
+    return { success: true };
+  },
+
+  // 6. Subscrição em Tempo Real (Supabase Realtime Channels)
+  subscribeToChanges(callback: () => void): () => void {
+    const channel = supabase
+      .channel('public:crm_realtime_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'opportunities' }, () => {
+        callback();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, () => {
+        callback();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 };
