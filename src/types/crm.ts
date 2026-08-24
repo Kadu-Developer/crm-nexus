@@ -1,4 +1,4 @@
-﻿export type Segment = 
+export type Segment = 
   | 'industria'
   | 'varejo_ecom'
   | 'servicos'
@@ -77,6 +77,8 @@ export interface User {
   role: 'admin_ceo' | 'consultant' | 'viewer';
   avatar: string;
   commissionRate: number; // e.g. 10%
+  mustChangePassword?: boolean;
+  passwordChangedAt?: string;
 }
 
 export interface Contact {

@@ -35,11 +35,11 @@ import {
   BarChart3,
   Settings,
   Calendar as CalendarIcon,
-} from 'lucide-react';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
-  const { profile, isLoading, signOut } = useAuth();
+  const { profile, isLoading, signOut, changePassword } = useAuth();
   const router = useRouter();
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>(INITIAL_OPPORTUNITIES);
@@ -470,6 +470,14 @@ function AppContent() {
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         onAddActivity={handleAddActivity}
+      />
+
+      {/* Modal de Troca Obrigatória de Senha no 1º Login */}
+      <ChangePasswordModal
+        isOpen={Boolean(profile?.mustChangePassword)}
+        userEmail={profile?.email || ''}
+        userName={profile?.name || ''}
+        onPasswordChanged={changePassword}
       />
     </div>
   );

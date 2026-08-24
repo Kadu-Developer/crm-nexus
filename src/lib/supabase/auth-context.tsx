@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
@@ -10,6 +10,7 @@ interface AuthContextType {
   profile: AppUser | null;
   isLoading: boolean;
   signInWithEmail: (email: string, password?: string) => Promise<{ error?: string }>;
+  changePassword: (newPassword: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -18,10 +19,10 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   isLoading: true,
   signInWithEmail: async () => ({}),
+  changePassword: async () => ({}),
   signOut: async () => {},
 });
 
-// Mock user lookup for demo mode
 const findMockUser = (email: string): AppUser | undefined => {
   const user = USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
   if (user) {
@@ -32,6 +33,8 @@ const findMockUser = (email: string): AppUser | undefined => {
       role: user.role,
       avatar: user.avatar,
       commissionRate: user.commissionRate,
+      mustChangePassword: user.mustChangePassword,
+      passwordChangedAt: user.passwordChangedAt,
     };
   }
   return undefined;
@@ -42,21 +45,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Demo mode is opt-in and must never be enabled in production.
-  const isDemoMode = true;
+  const supabaseConfigured =
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('seu-projeto');
+
+  const isDemoMode = !supabaseConfigured || process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD || 'Nexus@2026';
   const DEMO_USER_KEY = 'demoUser';
 
   useEffect(() => {
     if (isDemoMode) {
-      // In demo mode, check for persisted demo user in localStorage
       const storedUserEmail = localStorage.getItem(DEMO_USER_KEY);
       if (storedUserEmail) {
         const mockUser = findMockUser(storedUserEmail);
         if (mockUser) {
+          const changed = localStorage.getItem(`pw_changed_${mockUser.id}`);
+          const effectiveUser = {
+            ...mockUser,
+            mustChangePassword: changed === 'true' ? false : (mockUser.mustChangePassword ?? false),
+          };
           queueMicrotask(() => {
-            setUser(mockUser);
-            setProfile(mockUser);
+            setUser(effectiveUser);
+            setProfile(effectiveUser);
           });
         }
       }
@@ -67,7 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get session from Supabase
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        // Fetch profile from database
+        const mustChange = session.user.user_metadata?.must_change_password ?? false;
+
         supabase
           .from('profiles')
           .select('*')
@@ -82,6 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: profileData.role,
                 avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
                 commissionRate: profileData.commission_rate || 10,
+                mustChangePassword: profileData.must_change_password ?? mustChange,
+                passwordChangedAt: profileData.password_changed_at,
               };
               setUser(appUser);
               setProfile(appUser);
@@ -99,7 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
-          // Fetch profile from database
+          const mustChange = session.user.user_metadata?.must_change_password ?? false;
+
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
@@ -114,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               role: profileData.role,
               avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
               commissionRate: profileData.commission_rate || 10,
+              mustChangePassword: profileData.must_change_password ?? mustChange,
+              passwordChangedAt: profileData.password_changed_at,
             };
             setUser(appUser);
             setProfile(appUser);
@@ -126,7 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Cleanup subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
@@ -138,19 +154,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isDemoMode) {
       if (password !== demoPassword) {
         setIsLoading(false);
-        return { error: 'Senha de teste inválida.' };
+        return { error: 'Senha inválida.' };
       }
 
       const mockUser = findMockUser(email);
       if (mockUser) {
         localStorage.setItem(DEMO_USER_KEY, email);
-        setUser(mockUser);
-        setProfile(mockUser);
+        const changed = localStorage.getItem(`pw_changed_${mockUser.id}`);
+        const effectiveUser = {
+          ...mockUser,
+          mustChangePassword: changed === 'true' ? false : (mockUser.mustChangePassword ?? false),
+        };
+        setUser(effectiveUser);
+        setProfile(effectiveUser);
         setIsLoading(false);
         return {};
       }
       setIsLoading(false);
-      return { error: 'Usuário não encontrado no modo demo. Tente: tiago@nexus.com.br, ana@nexus.com.br ou diretoria@nexus.com.br' };
+      return { error: 'Usuário não encontrado.' };
     }
 
     try {
@@ -175,6 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: profileError?.message || 'Perfil do usuário não encontrado.' };
       }
 
+      const mustChange = data.user.user_metadata?.must_change_password ?? profileData.must_change_password ?? false;
+
       const appUser: AppUser = {
         id: profileData.id,
         name: profileData.name,
@@ -182,6 +205,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: profileData.role,
         avatar: profileData.avatar_url || profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
         commissionRate: profileData.commission_rate || 10,
+        mustChangePassword: mustChange,
+        passwordChangedAt: profileData.password_changed_at,
       };
       setUser(appUser);
       setProfile(appUser);
@@ -190,6 +215,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       setIsLoading(false);
       const message = err instanceof Error ? err.message : 'Erro ao realizar login.';
+      return { error: message };
+    }
+  };
+
+  const changePassword = async (newPassword: string): Promise<{ error?: string }> => {
+    if (isDemoMode && user) {
+      localStorage.setItem(`pw_changed_${user.id}`, 'true');
+      const updatedUser = { ...user, mustChangePassword: false, passwordChangedAt: new Date().toISOString() };
+      setUser(updatedUser);
+      setProfile(updatedUser);
+      return {};
+    }
+
+    try {
+      // 1. Atualiza a senha no Supabase Auth e desmarca a flag de primeiro login
+      const { error: authError } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: {
+          must_change_password: false,
+          password_changed_at: new Date().toISOString(),
+        },
+      });
+
+      if (authError) {
+        return { error: authError.message };
+      }
+
+      // 2. Atualiza a flag na tabela profiles
+      if (user?.id) {
+        await supabase
+          .from('profiles')
+          .update({
+            must_change_password: false,
+            password_changed_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+
+        const updatedUser = {
+          ...user,
+          mustChangePassword: false,
+          passwordChangedAt: new Date().toISOString(),
+        };
+        setUser(updatedUser);
+        setProfile(updatedUser);
+      }
+
+      return {};
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao atualizar a senha.';
       return { error: message };
     }
   };
@@ -205,7 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isLoading, signInWithEmail, signOut }}>
+    <AuthContext.Provider value={{ user, profile, isLoading, signInWithEmail, changePassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );
