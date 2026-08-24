@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- NEXUS CRM - SUPABASE SCHEMA & ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
 
@@ -233,20 +233,56 @@ CREATE POLICY "Atividades gerenciadas pelo responsável ou CEO"
 
 -- Trigger para criar perfil automaticamente no SignUp do Supabase Auth
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  user_role_val public.user_role;
+  user_name_val text;
 BEGIN
+  -- Determinar nome
+  user_name_val := COALESCE(
+    NEW.raw_user_meta_data->>'name',
+    NEW.raw_user_meta_data->>'full_name',
+    split_part(NEW.email, '@', 1)
+  );
+
+  -- Determinar cargo (admin_ceo para emails chave, ou o que vier no metadata)
+  IF NEW.email IN ('carlos@nexustechflow.com.br', 'diretoria@nexus.com.br', 'kaduesr@gmail.com') THEN
+    user_role_val := 'admin_ceo'::public.user_role;
+  ELSIF (NEW.raw_user_meta_data->>'role') IN ('admin_ceo', 'consultant', 'viewer') THEN
+    user_role_val := (NEW.raw_user_meta_data->>'role')::public.user_role;
+  ELSE
+    user_role_val := 'consultant'::public.user_role;
+  END IF;
+
+  -- Inserir ou atualizar na tabela profiles
   INSERT INTO public.profiles (id, name, email, role, avatar_url)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    user_name_val,
     NEW.email,
-    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'consultant'),
-    NEW.raw_user_meta_data->>'avatar_url'
-  );
+    user_role_val,
+    COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture')
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    role = EXCLUDED.role,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = NOW();
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'Erro ao criar profile para %: %', NEW.email, SQLERRM;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
-CREATE OR REPLACE TRIGGER on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
