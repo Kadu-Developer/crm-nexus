@@ -148,25 +148,19 @@ function LoginContent() {
             {/* Acesso Rápido de Demonstração */}
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block text-center">
-                Acesso Rápido (Clique para preencher):
+                Acesso Administrativo (Clique para preencher):
               </span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
                 <button
                   type="button"
                   onClick={() => handleQuickFill('carlos@nexusflowtech.com.br', 'Nexus@2026')}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 text-left transition cursor-pointer"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 text-left transition cursor-pointer flex items-center justify-between"
                 >
-                  <p className="font-bold text-slate-900 dark:text-white truncate">Carlos Eduardo</p>
-                  <p className="text-[10px] text-blue-600 dark:text-cyan-400">Diretor / CTO (Admin)</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('ana@nexus.com.br', 'Nexus@2026')}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 text-left transition cursor-pointer"
-                >
-                  <p className="font-bold text-slate-900 dark:text-white truncate">Ana Ribeiro</p>
-                  <p className="text-[10px] text-pink-600 dark:text-pink-400">Consultora Comercial</p>
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Carlos Eduardo</p>
+                    <p className="text-[10px] text-blue-600 dark:text-cyan-400">carlos@nexusflowtech.com.br</p>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-cyan-400 font-bold">Diretor / CTO</span>
                 </button>
               </div>
             </div>

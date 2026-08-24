@@ -5,11 +5,15 @@ import { INITIAL_OPPORTUNITIES } from '@/lib/mock-data';
 const DEMO_OPPORTUNITIES_KEY = 'nexus_demo_opportunities';
 
 async function getDemoOpportunities(): Promise<Opportunity[]> {
-  if (typeof window === 'undefined') return INITIAL_OPPORTUNITIES;
+  if (typeof window === 'undefined') return [];
 
   try {
     const stored = localStorage.getItem(DEMO_OPPORTUNITIES_KEY);
-    const storedOpportunities = stored ? JSON.parse(stored) as Opportunity[] : [];
+    let storedOpportunities = stored ? JSON.parse(stored) as Opportunity[] : [];
+    
+    // Remove quaisquer leads mock legados (ex: opp_1, opp_2)
+    storedOpportunities = storedOpportunities.filter((o) => !o.id.startsWith('opp_'));
+    saveDemoOpportunities(storedOpportunities);
 
     const sheetOpportunities = await getGoogleSheetOpportunities();
     if (sheetOpportunities.length > 0) {
@@ -22,9 +26,9 @@ async function getDemoOpportunities(): Promise<Opportunity[]> {
       saveDemoOpportunities(mergedOpportunities);
       return mergedOpportunities;
     }
-    return storedOpportunities.length > 0 ? storedOpportunities : INITIAL_OPPORTUNITIES;
+    return storedOpportunities;
   } catch {
-    return INITIAL_OPPORTUNITIES;
+    return [];
   }
 }
 
