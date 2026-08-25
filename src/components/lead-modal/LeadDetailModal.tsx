@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
-import { Opportunity, Activity } from '@/types/crm';
-import { STAGES, USERS } from '@/lib/mock-data';
+import React, { useState, useEffect } from 'react';
+import { Opportunity, Activity, Qualification } from '@/types/crm';
+import { STAGES } from '@/lib/mock-data';
 import { formatCurrency, formatDate, formatDateTime, isActionOverdue, isActionToday } from '@/lib/utils';
 import {
   X,
@@ -12,19 +12,15 @@ import {
   Phone,
   Mail,
   ExternalLink,
-  Shield,
   AlertCircle,
   Clock,
   CheckCircle2,
-  MessageSquare,
-  Calendar,
   FileText,
   Activity as ActivityIcon,
   Plus,
-  ChevronDown,
-  DollarSign,
-  TrendingUp,
-  Award,
+  Edit3,
+  Save,
+  Check,
 } from 'lucide-react';
 
 interface LeadDetailModalProps {
@@ -32,6 +28,7 @@ interface LeadDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddActivity: (oppId: string, activity: Activity) => void;
+  onUpdateQualification?: (oppId: string, qualification: Partial<Qualification>) => void;
 }
 
 export function LeadDetailModal({
@@ -39,9 +36,11 @@ export function LeadDetailModal({
   isOpen,
   onClose,
   onAddActivity,
+  onUpdateQualification,
 }: LeadDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'visao_geral' | 'diagnostico' | 'financeiro' | 'timeline'>('visao_geral');
   const [showAddActivity, setShowAddActivity] = useState(false);
+  const [isEditingQual, setIsEditingQual] = useState(false);
   const [newActivity, setNewActivity] = useState({
     activityType: 'reuniao' as Activity['activityType'],
     summary: '',
@@ -49,6 +48,42 @@ export function LeadDetailModal({
     nextAction: '',
     nextActionDate: '2026-08-16T10:00',
   });
+
+  const [qualForm, setQualForm] = useState<Qualification>({
+    mainProblem: '',
+    impactedArea: '',
+    currentWorkflow: '',
+    currentSystems: '',
+    usesSpreadsheetsManual: false,
+    hasUnintegratedSystems: false,
+    mainBottleneck: '',
+    estimatedImpactCost: '',
+    hasBudget: 'desconhecido',
+    urgencyLevel: 'media',
+    opportunityPotential: 'medio',
+    consultantNotes: '',
+  });
+
+  useEffect(() => {
+    if (opportunity?.qualification) {
+      setQualForm({
+        mainProblem: opportunity.qualification.mainProblem || '',
+        impactedArea: opportunity.qualification.impactedArea || '',
+        currentWorkflow: opportunity.qualification.currentWorkflow || '',
+        currentSystems: opportunity.qualification.currentSystems || '',
+        usesSpreadsheetsManual: Boolean(opportunity.qualification.usesSpreadsheetsManual),
+        hasUnintegratedSystems: Boolean(opportunity.qualification.hasUnintegratedSystems),
+        mainBottleneck: opportunity.qualification.mainBottleneck || '',
+        estimatedImpactCost: opportunity.qualification.estimatedImpactCost || '',
+        hasBudget: opportunity.qualification.hasBudget || 'desconhecido',
+        urgencyLevel: opportunity.qualification.urgencyLevel || 'media',
+        desiredTimeline: opportunity.qualification.desiredTimeline || '',
+        competitorSupplier: opportunity.qualification.competitorSupplier || '',
+        opportunityPotential: opportunity.qualification.opportunityPotential || 'medio',
+        consultantNotes: opportunity.qualification.consultantNotes || '',
+      });
+    }
+  }, [opportunity]);
 
   if (!isOpen || !opportunity) return null;
 
@@ -309,102 +344,312 @@ export function LeadDetailModal({
           {activeTab === 'diagnostico' && (
             <div className="space-y-4">
               <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> Diagnóstico Comercial & Mapeamento de Dores (Nexus)
-                </h3>
-
-                <div className="space-y-4 text-xs">
-                  <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Qual é o principal problema / dor?</label>
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
-                      {opportunity.qualification?.mainProblem || 'Não preenchido'}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-slate-400 font-semibold block mb-1">Área Impactada</label>
-                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
-                        {opportunity.qualification?.impactedArea || 'Não informado'}
+                <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> Diagnóstico Comercial & Mapeamento de Dores (Nexus)
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {!isEditingQual ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingQual(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs font-semibold rounded-lg border border-blue-500/30 transition cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Editar Diagnóstico
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (opportunity.qualification) {
+                              setQualForm({
+                                mainProblem: opportunity.qualification.mainProblem || '',
+                                impactedArea: opportunity.qualification.impactedArea || '',
+                                currentWorkflow: opportunity.qualification.currentWorkflow || '',
+                                currentSystems: opportunity.qualification.currentSystems || '',
+                                usesSpreadsheetsManual: Boolean(opportunity.qualification.usesSpreadsheetsManual),
+                                hasUnintegratedSystems: Boolean(opportunity.qualification.hasUnintegratedSystems),
+                                mainBottleneck: opportunity.qualification.mainBottleneck || '',
+                                estimatedImpactCost: opportunity.qualification.estimatedImpactCost || '',
+                                hasBudget: opportunity.qualification.hasBudget || 'desconhecido',
+                                urgencyLevel: opportunity.qualification.urgencyLevel || 'media',
+                                desiredTimeline: opportunity.qualification.desiredTimeline || '',
+                                competitorSupplier: opportunity.qualification.competitorSupplier || '',
+                                opportunityPotential: opportunity.qualification.opportunityPotential || 'medio',
+                                consultantNotes: opportunity.qualification.consultantNotes || '',
+                              });
+                            }
+                            setIsEditingQual(false);
+                          }}
+                          className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onUpdateQualification && opportunity) {
+                              onUpdateQualification(opportunity.id, qualForm);
+                            }
+                            setIsEditingQual(false);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-sm transition cursor-pointer"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Salvar Diagnóstico
+                        </button>
                       </div>
-                    </div>
-                    <div>
-                      <label className="text-slate-400 font-semibold block mb-1">Principal Gargalo Identificado</label>
-                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
-                        {opportunity.qualification?.mainBottleneck || 'Não informado'}
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Como funciona o processo hoje?</label>
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
-                      {opportunity.qualification?.currentWorkflow || 'Não informado'}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-slate-400 font-semibold block mb-1">Sistemas Utilizados Atualmente</label>
-                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
-                        {opportunity.qualification?.currentSystems || 'Não informado'}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-slate-400 font-semibold block mb-1">Impacto Financeiro Estimado</label>
-                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-rose-300 font-semibold">
-                        {opportunity.qualification?.estimatedImpactCost || 'Não calculado'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Badges de Qualificação */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
-                      <span className="text-[10px] text-slate-500 uppercase block">Usa Planilhas Manuais?</span>
-                      <span className={`font-bold ${opportunity.qualification?.usesSpreadsheetsManual ? 'text-amber-400' : 'text-slate-400'}`}>
-                        {opportunity.qualification?.usesSpreadsheetsManual ? 'SIM ⚠️' : 'NÃO'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
-                      <span className="text-[10px] text-slate-500 uppercase block">Sistemas sem Integração?</span>
-                      <span className={`font-bold ${opportunity.qualification?.hasUnintegratedSystems ? 'text-rose-400' : 'text-slate-400'}`}>
-                        {opportunity.qualification?.hasUnintegratedSystems ? 'SIM ⚠️' : 'NÃO'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
-                      <span className="text-[10px] text-slate-500 uppercase block">Existe Orçamento?</span>
-                      <span className="font-bold text-emerald-400 capitalize">
-                        {opportunity.qualification?.hasBudget?.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
-                      <span className="text-[10px] text-slate-500 uppercase block">Urgência</span>
-                      <span className="font-bold text-amber-400 capitalize">
-                        {opportunity.qualification?.urgencyLevel?.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
-                      <span className="text-[10px] text-slate-500 uppercase block">Potencial</span>
-                      <span className="font-bold text-blue-300 capitalize">
-                        {opportunity.qualification?.opportunityPotential || 'Não informado'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {opportunity.qualification?.consultantNotes && (
-                    <div className="pt-2">
-                      <label className="text-slate-400 font-semibold block mb-1">Notas do Consultor</label>
-                      <div className="p-3 bg-blue-950/20 border border-blue-800/40 rounded-lg text-blue-200 italic">
-                        &quot;{opportunity.qualification.consultantNotes}&quot;
-                      </div>
-                    </div>
-                  )}
                 </div>
+
+                {!isEditingQual ? (
+                  <div className="space-y-4 text-xs">
+                    <div>
+                      <label className="text-slate-400 font-semibold block mb-1">Qual é o principal problema / dor?</label>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
+                        {opportunity.qualification?.mainProblem || 'Não preenchido'}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-slate-400 font-semibold block mb-1">Área Impactada</label>
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
+                          {opportunity.qualification?.impactedArea || 'Não informado'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-slate-400 font-semibold block mb-1">Principal Gargalo Identificado</label>
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
+                          {opportunity.qualification?.mainBottleneck || 'Não informado'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-400 font-semibold block mb-1">Como funciona o processo hoje?</label>
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
+                        {opportunity.qualification?.currentWorkflow || 'Não informado'}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-slate-400 font-semibold block mb-1">Sistemas Utilizados Atualmente</label>
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-slate-200">
+                          {opportunity.qualification?.currentSystems || 'Não informado'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-slate-400 font-semibold block mb-1">Impacto Financeiro Estimado</label>
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg text-rose-300 font-semibold">
+                          {opportunity.qualification?.estimatedImpactCost || 'Não calculado'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Badges de Qualificação */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
+                        <span className="text-[10px] text-slate-500 uppercase block">Usa Planilhas Manuais?</span>
+                        <span className={`font-bold ${opportunity.qualification?.usesSpreadsheetsManual ? 'text-amber-400' : 'text-slate-400'}`}>
+                          {opportunity.qualification?.usesSpreadsheetsManual ? 'SIM ⚠️' : 'NÃO'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
+                        <span className="text-[10px] text-slate-500 uppercase block">Sistemas sem Integração?</span>
+                        <span className={`font-bold ${opportunity.qualification?.hasUnintegratedSystems ? 'text-rose-400' : 'text-slate-400'}`}>
+                          {opportunity.qualification?.hasUnintegratedSystems ? 'SIM ⚠️' : 'NÃO'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
+                        <span className="text-[10px] text-slate-500 uppercase block">Existe Orçamento?</span>
+                        <span className="font-bold text-emerald-400 capitalize">
+                          {opportunity.qualification?.hasBudget?.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-center">
+                        <span className="text-[10px] text-slate-500 uppercase block">Urgência</span>
+                        <span className="font-bold text-amber-400 capitalize">
+                          {opportunity.qualification?.urgencyLevel?.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {opportunity.qualification?.consultantNotes && (
+                      <div className="pt-2">
+                        <label className="text-slate-400 font-semibold block mb-1">Notas do Consultor</label>
+                        <div className="p-3 bg-blue-950/20 border border-blue-800/40 rounded-lg text-blue-200 italic">
+                          &quot;{opportunity.qualification.consultantNotes}&quot;
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (onUpdateQualification && opportunity) {
+                        onUpdateQualification(opportunity.id, qualForm);
+                      }
+                      setIsEditingQual(false);
+                    }}
+                    className="space-y-4 text-xs"
+                  >
+                    <div>
+                      <label className="text-slate-300 font-semibold block mb-1">Qual é o principal problema / dor?</label>
+                      <textarea
+                        rows={2}
+                        value={qualForm.mainProblem}
+                        onChange={(e) => setQualForm({ ...qualForm, mainProblem: e.target.value })}
+                        placeholder="Ex: Falta de visibilidade dos gargalos comerciais..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-slate-300 font-semibold block mb-1">Área Impactada</label>
+                        <input
+                          type="text"
+                          value={qualForm.impactedArea}
+                          onChange={(e) => setQualForm({ ...qualForm, impactedArea: e.target.value })}
+                          placeholder="Ex: Comercial, Financeiro, Operações..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-300 font-semibold block mb-1">Principal Gargalo Identificado</label>
+                        <input
+                          type="text"
+                          value={qualForm.mainBottleneck}
+                          onChange={(e) => setQualForm({ ...qualForm, mainBottleneck: e.target.value })}
+                          placeholder="Ex: Falta de integração entre sistemas..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 font-semibold block mb-1">Como funciona o processo hoje?</label>
+                      <textarea
+                        rows={2}
+                        value={qualForm.currentWorkflow}
+                        onChange={(e) => setQualForm({ ...qualForm, currentWorkflow: e.target.value })}
+                        placeholder="Ex: Processo manual via planilhas e e-mails..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-slate-300 font-semibold block mb-1">Sistemas Utilizados Atualmente</label>
+                        <input
+                          type="text"
+                          value={qualForm.currentSystems}
+                          onChange={(e) => setQualForm({ ...qualForm, currentSystems: e.target.value })}
+                          placeholder="Ex: Excel, ERP Protheus, WhatsApp..."
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-300 font-semibold block mb-1">Impacto Financeiro Estimado</label>
+                        <input
+                          type="text"
+                          value={qualForm.estimatedImpactCost || ''}
+                          onChange={(e) => setQualForm({ ...qualForm, estimatedImpactCost: e.target.value })}
+                          placeholder="Ex: R$ 50.000/mês em retrabalho"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+                      <div>
+                        <label className="text-slate-400 block mb-1 font-medium">Usa Planilhas?</label>
+                        <select
+                          value={qualForm.usesSpreadsheetsManual ? 'true' : 'false'}
+                          onChange={(e) => setQualForm({ ...qualForm, usesSpreadsheetsManual: e.target.value === 'true' })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="true">SIM ⚠️</option>
+                          <option value="false">NÃO</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 block mb-1 font-medium">Sem Integração?</label>
+                        <select
+                          value={qualForm.hasUnintegratedSystems ? 'true' : 'false'}
+                          onChange={(e) => setQualForm({ ...qualForm, hasUnintegratedSystems: e.target.value === 'true' })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="true">SIM ⚠️</option>
+                          <option value="false">NÃO</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 block mb-1 font-medium">Orçamento</label>
+                        <select
+                          value={qualForm.hasBudget}
+                          onChange={(e) => setQualForm({ ...qualForm, hasBudget: e.target.value as Qualification['hasBudget'] })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="sim_confirmado">Sim Confirmado</option>
+                          <option value="verba_em_definicao">Em Definição</option>
+                          <option value="sem_orcamento">Sem Orçamento</option>
+                          <option value="desconhecido">Desconhecido</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 block mb-1 font-medium">Urgência</label>
+                        <select
+                          value={qualForm.urgencyLevel}
+                          onChange={(e) => setQualForm({ ...qualForm, urgencyLevel: e.target.value as Qualification['urgencyLevel'] })}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="baixa">Baixa</option>
+                          <option value="media">Média</option>
+                          <option value="alta">Alta</option>
+                          <option value="critica_imediata">Crítica / Imediata</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-slate-300 font-semibold block mb-1">Notas do Consultor</label>
+                      <textarea
+                        rows={3}
+                        value={qualForm.consultantNotes || ''}
+                        onChange={(e) => setQualForm({ ...qualForm, consultantNotes: e.target.value })}
+                        placeholder="Observações estratégicas da reunião de qualificação..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingQual(false)}
+                        className="px-4 py-2 text-xs text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg transition shadow-md shadow-blue-600/30 cursor-pointer"
+                      >
+                        <Save className="w-4 h-4" /> Salvar Qualificação
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}

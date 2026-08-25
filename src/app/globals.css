@@ -14,7 +14,13 @@
 	border-color: var(--color-border);
 }
 
+html,
 body {
+	width: 100%;
+	max-width: 100vw;
+	min-height: 100vh;
+	overflow-x: hidden;
+	overscroll-behavior-x: none;
 	background: var(--color-background);
 	color: var(--color-foreground);
 	font-family: var(--font-ui);

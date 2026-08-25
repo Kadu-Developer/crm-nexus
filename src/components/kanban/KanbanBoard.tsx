@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useCallback } from 'react';
 import { Opportunity, PipelineStage } from '@/types/crm';
@@ -150,7 +150,7 @@ export function KanbanBoard({
           )}
         </div>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-6 pt-1 h-[calc(100vh-220px)] min-h-[420px] select-none lg:grid lg:grid-cols-6 lg:overflow-x-hidden">
+      <div className="flex gap-3 overflow-x-auto pb-6 pt-1 h-[calc(100vh-220px)] min-h-[420px] w-full max-w-full overscroll-x-contain lg:grid lg:grid-cols-6 lg:overflow-x-hidden">
         {PIPELINE_GROUPS.map((group) => {
           const stageOpps = filteredOpportunities.filter((opp) => group.stageIds.includes(opp.stage));
           const stageTotal = stageOpps.reduce(
@@ -217,8 +217,13 @@ export function KanbanBoard({
                               onClick={() => onSelectOpportunity(opp)}
                               onKeyDown={(e) => handleKeyDown(e, opp, opp.stage)}
                               tabIndex={0}
+                              role="button"
                               aria-label={`Oportunidade: ${opp.tradeName || opp.companyName}. Próxima ação: ${opp.nextActionDescription}. ${opp.activities.length} interações.`}
-                              className={`p-3.5 bg-white dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/60 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 ${
+                              style={{
+                                ...providedDrag.draggableProps.style,
+                                touchAction: 'manipulation',
+                              }}
+                              className={`p-3.5 bg-white dark:bg-slate-800/95 hover:bg-slate-50 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/60 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group relative touch-manipulation focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 ${
                                 snapshotDrag.isDragging
                                   ? 'shadow-2xl ring-2 ring-blue-500 rotate-1 scale-105 z-50 bg-white dark:bg-slate-800'
                                   : ''
@@ -229,7 +234,7 @@ export function KanbanBoard({
                                 <div className="flex items-center gap-1.5 flex-1 truncate">
                                   <div
                                     {...providedDrag.dragHandleProps}
-                                    className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded"
+                                    className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded touch-none"
                                     title="Arrastar card"
                                     onClick={(e) => e.stopPropagation()}
                                   >
