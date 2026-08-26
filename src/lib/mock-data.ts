@@ -2,12 +2,36 @@ import { PipelineStage, StageDefinition, StageMacroPhase, Opportunity, User } fr
 
 export const USERS: User[] = [
   {
-    id: 'usr_carlos',
-    name: 'Carlos Eduardo',
-    email: 'carlos@nexusflowtech.com.br',
+    id: 'usr_marcel',
+    name: 'Marcel Wachowicz',
+    email: 'marcel@nexusflowtech.com.br',
     role: 'admin_ceo',
-    avatar: 'CE',
+    avatar: 'MW',
     commissionRate: 0,
+  },
+  {
+    id: 'usr_patrik',
+    name: 'Patrik Rodrigues',
+    email: 'patrik@nexusflowtech.com.br',
+    role: 'admin_tech',
+    avatar: 'PR',
+    commissionRate: 0,
+  },
+  {
+    id: 'usr_carlos',
+    name: 'Carlos Eduardo da Silva Ribeiro',
+    email: 'carlos@nexusflowtech.com.br',
+    role: 'admin_tech',
+    avatar: 'CR',
+    commissionRate: 0,
+  },
+  {
+    id: 'usr_consultor_teste',
+    name: 'Consultor Teste',
+    email: 'consultor.teste@nexusflowtech.com.br',
+    role: 'consultant',
+    avatar: 'CT',
+    commissionRate: 10,
   },
   {
     id: 'usr_tiago',
@@ -24,14 +48,6 @@ export const USERS: User[] = [
     role: 'consultant',
     avatar: 'AR',
     commissionRate: 10,
-  },
-  {
-    id: 'usr_ceo',
-    name: 'Diretoria Executiva',
-    email: 'diretoria@nexus.com.br',
-    role: 'admin_ceo',
-    avatar: 'CEO',
-    commissionRate: 0,
   },
 ];
 
@@ -99,11 +115,131 @@ export function calculateOpportunityScore(opp: Partial<Opportunity>): number {
     score += 4;
   }
   
-  // 6. Engajamento / Atividades (máx 10 pts)
-  if (opp.activities && opp.activities.length >= 2) score += 10;
-  else if (opp.activities && opp.activities.length === 1) score += 5;
+  // 6. Próximo passo agendado (máx 10 pts)
+  if (opp.nextActionDescription && opp.nextActionDate) {
+    score += 10;
+  }
   
   return Math.min(100, Math.max(0, score));
 }
 
-export const INITIAL_OPPORTUNITIES: Opportunity[] = [];
+export const INITIAL_OPPORTUNITIES: Opportunity[] = [
+  {
+    id: 'opp_metalalfa',
+    companyName: 'MetalAlfa Indústria Metalúrgica Ltda',
+    tradeName: 'MetalAlfa',
+    title: 'Automação de Apontamento e Chão de Fábrica',
+    solutionService: 'Diagnóstico & Automação Industrial',
+    cnpj: '42.158.963/0001-52',
+    segment: 'industria',
+    city: 'Campinas',
+    state: 'SP',
+    companySize: 'media_50_199',
+    leadSource: 'linkedin',
+    stage: 'pre_diag_agendado',
+    probability: 25,
+    estimatedValue: 45000,
+    proposedValue: 45000,
+    weightedRevenue: 11250,
+    estimatedCommission: 4500,
+    estimatedCloseDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+    consultantId: 'usr_consultor_teste',
+    consultantName: 'Consultor Teste',
+    score: 85,
+    nextActionDescription: 'Realizar Reunião de Pré-Diagnóstico com Diretor de Operações',
+    nextActionDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    contacts: [
+      {
+        id: 'cont_1',
+        companyId: 'opp_metalalfa',
+        name: 'Carlos Eduardo Mendes',
+        jobTitle: 'Sócio-Administrador',
+        area: 'diretoria_clevel',
+        email: 'carlos@metalalfa.com.br',
+        phone: '(11) 98765-4321',
+        isDecisionMaker: true,
+        decisionInfluence: 'alta',
+      },
+    ],
+    qualification: {
+      mainProblem: 'Controle de chão de fábrica descentralizado em planilhas',
+      impactedArea: 'Operações e Logística',
+      currentWorkflow: 'Apontamentos físicos em papel consolidados semanalmente em Excel',
+      currentSystems: 'ERP legado sem módulo de chão de fábrica',
+      mainBottleneck: 'Falta de integração entre apontamento de produção e estoque',
+      hasBudget: 'sim_confirmado',
+      urgencyLevel: 'alta',
+      opportunityPotential: 'alto',
+      usesSpreadsheetsManual: true,
+      hasUnintegratedSystems: true,
+    },
+    activities: [
+      {
+        id: 'act_1',
+        opportunityId: 'opp_metalalfa',
+        consultantId: 'usr_consultor_teste',
+        activityType: 'whatsapp',
+        performedAt: new Date().toISOString(),
+        summary: 'Abordagem consultiva via WhatsApp',
+        resultDetails: 'Decisor confirmou interesse no Pré-Diagnóstico Técnico.',
+        nextAction: 'Reunião de Diagnóstico',
+        nextActionDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 'opp_techlog',
+    companyName: 'TechLog Express Transportes S.A.',
+    tradeName: 'TechLog Express',
+    title: 'Integração de Frotas e Eliminação de Comprovantes Manuais',
+    solutionService: 'Automação Logística & APIs',
+    cnpj: '18.234.567/0001-89',
+    segment: 'logistica',
+    city: 'São Paulo',
+    state: 'SP',
+    companySize: 'grande_200_mais',
+    leadSource: 'outbound',
+    stage: 'lead_identificado',
+    probability: 5,
+    estimatedValue: 75000,
+    proposedValue: 75000,
+    weightedRevenue: 3750,
+    estimatedCommission: 7500,
+    estimatedCloseDate: new Date(Date.now() + 45 * 24 * 3600 * 1000).toISOString(),
+    consultantId: 'usr_consultor_teste',
+    consultantName: 'Consultor Teste',
+    score: 68,
+    nextActionDescription: 'Disparar abordagem consultiva para o Diretor de Logística',
+    nextActionDate: new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    contacts: [
+      {
+        id: 'cont_2',
+        companyId: 'opp_techlog',
+        name: 'Roberto Viana',
+        jobTitle: 'Diretor de Logística',
+        area: 'operacoes',
+        email: 'roberto@techlog.com.br',
+        phone: '(11) 3456-7890',
+        isDecisionMaker: true,
+        decisionInfluence: 'alta',
+      },
+    ],
+    qualification: {
+      mainProblem: 'Dificuldade de rastreamento em tempo real de frotas terceirizadas',
+      impactedArea: 'Logística & SAC',
+      currentWorkflow: 'Planilhas enviadas por WhatsApp pelos motoristas parceiros',
+      currentSystems: 'TMS interno sem API de integração',
+      mainBottleneck: 'Processos manuais de checagem de comprovantes de entrega',
+      hasBudget: 'verba_em_definicao',
+      urgencyLevel: 'media',
+      opportunityPotential: 'alto',
+      usesSpreadsheetsManual: true,
+      hasUnintegratedSystems: true,
+    },
+    activities: [],
+  },
+];

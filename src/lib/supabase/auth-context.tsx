@@ -41,13 +41,13 @@ const findMockUser = (email: string): AppUser | undefined => {
 
   // Fallback para novos emails corporativos
   if (cleanEmail.includes('carlos') && !cleanEmail.includes('marcel') && !cleanEmail.includes('patrik')) {
-    // Carlos Eduardo (Tech Lead)
+    // Carlos Eduardo da Silva Ribeiro (Tech Lead Full Stack & IA)
     return {
       id: 'usr_carlos',
-      name: 'Carlos Eduardo',
+      name: 'Carlos Eduardo da Silva Ribeiro',
       email: cleanEmail,
       role: 'admin_tech',
-      avatar: 'CE',
+      avatar: 'CR',
       commissionRate: 0,
       mustChangePassword: false,
     };
@@ -55,20 +55,20 @@ const findMockUser = (email: string): AppUser | undefined => {
 
   // Fallback for other admins
   if (cleanEmail.includes('marcel')) {
-    // Marcelo (CEO)
+    // Marcel Wachowicz (Founder & CEO / CFO)
     return {
       id: 'usr_marcel',
-      name: 'Marcelo',
+      name: 'Marcel Wachowicz',
       email: cleanEmail,
       role: 'admin_ceo',
-      avatar: 'M',
+      avatar: 'MW',
       commissionRate: 0,
       mustChangePassword: false,
     };
   }
 
-  if (cleanEmail.includes('patrik')) {
-    // Patrik Rodrigues (Tech Lead)
+  if (cleanEmail.includes('patrik') || cleanEmail.includes('patrick')) {
+    // Patrik Rodrigues (CTO & IA)
     return {
       id: 'usr_patrik',
       name: 'Patrik Rodrigues',
@@ -76,6 +76,19 @@ const findMockUser = (email: string): AppUser | undefined => {
       role: 'admin_tech',
       avatar: 'PR',
       commissionRate: 0,
+      mustChangePassword: false,
+    };
+  }
+
+  if (cleanEmail.includes('teste') || cleanEmail.includes('consultor')) {
+    // Consultor Teste
+    return {
+      id: 'usr_consultor_teste',
+      name: 'Consultor Teste',
+      email: cleanEmail,
+      role: 'consultant',
+      avatar: 'CT',
+      commissionRate: 10,
       mustChangePassword: false,
     };
   }
