@@ -74,7 +74,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin_ceo' | 'consultant' | 'viewer';
+  role: 'admin_ceo' | 'admin_tech' | 'consultant' | 'viewer';
   avatar: string;
   commissionRate: number; // e.g. 10%
   mustChangePassword?: boolean;

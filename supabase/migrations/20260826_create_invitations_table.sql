@@ -1,15 +1,19 @@
--- Create invitations table for consultant invitation system
--- This table supports the feature requested by the user to generate invite links for consultants
--- Importers: AdminInvitesPage component, RegisterPage component
--- Affected API: Supabase invitations table
--- Data schema: id (UUID), email (text), role (user_role), invited_by (UUID -> profiles), token (text), timestamps, status
--- User verbatim instruction: "Preciso criar também um envio de convite para os consultores! O Marcel vai gerar um link qe o consultor vai se cadastrar para começar a usar"
+-- ==============================================================================
+-- INVITATIONS TABLE FOR CONSULTANT ONBOARDING
+-- ==============================================================================
 
--- Create invitations table
+-- 1. Ensure admin_tech exists in user_role
+DO $$ BEGIN
+    ALTER TYPE user_role ADD VALUE 'admin_tech';
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- 2. CREATE INVITATIONS TABLE
 CREATE TABLE IF NOT EXISTS public.invitations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT NOT NULL,
-    role public.user_role NOT NULL DEFAULT 'consultant',
+    role TEXT NOT NULL DEFAULT 'consultant',
     invited_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     token TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -18,15 +22,15 @@ CREATE TABLE IF NOT EXISTS public.invitations (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled'))
 );
 
--- Index for token lookups
+-- 3. INDEXES
 CREATE INDEX IF NOT EXISTS idx_invitations_token ON public.invitations(token);
 CREATE INDEX IF NOT EXISTS idx_invitations_email ON public.invitations(email);
 
--- Enable RLS
+-- 4. ENABLE RLS
 ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
--- Policies for invitations
--- Admins can do everything
+-- 5. POLICIES
+DROP POLICY IF EXISTS "Admins podem gerenciar convites" ON public.invitations;
 CREATE POLICY "Admins podem gerenciar convites"
     ON public.invitations
     FOR ALL
@@ -34,24 +38,24 @@ CREATE POLICY "Admins podem gerenciar convites"
     USING (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+            WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
         )
     )
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.profiles
-            WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+            WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
         )
     );
 
--- Unauthenticated users (during registration) can select invitations by token
+DROP POLICY IF EXISTS "Qualquer um pode ler convites por token" ON public.invitations;
 CREATE POLICY "Qualquer um pode ler convites por token"
     ON public.invitations
     FOR SELECT
     TO anon, authenticated
     USING (TRUE);
 
--- Unauthenticated users can update invitation status during registration
+DROP POLICY IF EXISTS "Usuários podem atualizar convite ao se registrar" ON public.invitations;
 CREATE POLICY "Usuários podem atualizar convite ao se registrar"
     ON public.invitations
     FOR UPDATE

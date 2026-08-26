@@ -90,9 +90,9 @@ export function CalendarMonthGrid({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-[750px] overflow-auto bg-white dark:bg-slate-900 select-none">
-      {/* Cabeçalho */}
-      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95">
+    <div className="flex-1 flex flex-col min-w-[750px] h-full overflow-y-auto overflow-x-auto bg-white dark:bg-slate-900 select-none">
+      {/* Cabeçalho (Sticky no topo dentro do mesmo scroll container) */}
+      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md sticky top-0 z-30 shrink-0">
         {weekDayLabels.map((label, idx) => (
           <div
             key={idx}
@@ -105,7 +105,7 @@ export function CalendarMonthGrid({
 
       {/* Grade 7x5 */}
       <div
-        className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto max-h-[calc(100vh-12.5rem)]"
+        className="flex-1 grid grid-cols-7 auto-rows-fr shrink-0"
         style={{ minHeight: '600px' }}
       >
         {cells.map((cell, idx) => {

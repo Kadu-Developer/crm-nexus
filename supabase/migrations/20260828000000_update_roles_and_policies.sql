@@ -10,7 +10,6 @@ EXCEPTION
 END $$;
 
 -- 2. UPDATE HANDLE_NEW_USER FUNCTION TO SET ROLES FOR SPECIFIC EMAILS
-DROP FUNCTION IF EXISTS public.handle_new_user();
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -28,10 +27,10 @@ BEGIN
     split_part(NEW.email, '@', 1)
   );
 
-  -- Determinar cargo
-  IF NEW.email = 'marcel@nexuxflowtech.com.br' THEN
+  -- Determinar cargo dos 3 administradores
+  IF LOWER(NEW.email) IN ('marcel@nexusflowtech.com.br', 'marcel@nexuxflowtech.com.br') THEN
     user_role_val := 'admin_ceo'::public.user_role;
-  ELSIF NEW.email IN ('carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br') THEN
+  ELSIF LOWER(NEW.email) IN ('carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br') THEN
     user_role_val := 'admin_tech'::public.user_role;
   ELSIF (NEW.raw_user_meta_data->>'role') IN ('admin_ceo', 'admin_tech', 'consultant', 'viewer') THEN
     user_role_val := (NEW.raw_user_meta_data->>'role')::public.user_role;
@@ -64,12 +63,25 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
+-- Atualizar imediatamente os perfis existentes dos 3 administradores caso já existam
+UPDATE public.profiles
+SET role = 'admin_ceo'
+WHERE LOWER(email) IN ('marcel@nexusflowtech.com.br', 'marcel@nexuxflowtech.com.br');
+
+UPDATE public.profiles
+SET role = 'admin_tech'
+WHERE LOWER(email) IN ('carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br');
+
 -- 3. UPDATE OPPORTUNITY POLICIES
 -- Drop existing policies
 DROP POLICY IF EXISTS "Oportunidades visíveis por Dono ou CEO" ON public.opportunities;
 DROP POLICY IF EXISTS "Consultores podem criar oportunidades" ON public.opportunities;
 DROP POLICY IF EXISTS "Consultor atualiza suas oportunidades" ON public.opportunities;
 DROP POLICY IF EXISTS "Apenas CEO pode deletar oportunidades" ON public.opportunities;
+DROP POLICY IF EXISTS "Oportunidades visíveis por dono ou admins" ON public.opportunities;
+DROP POLICY IF EXISTS "Consultores e admins podem criar oportunidades" ON public.opportunities;
+DROP POLICY IF EXISTS "Consultor atualiza suas oportunidades e admin_ceo atualiza qualquer uma" ON public.opportunities;
+DROP POLICY IF EXISTS "Consultor deleta suas oportunidades e admin_ceo deleta qualquer uma" ON public.opportunities;
 
 -- Create new policies for opportunities
 -- Select: consultant can see their own, admin_ceo and admin_tech can see all
@@ -80,7 +92,7 @@ CREATE POLICY "Oportunidades visíveis por dono ou admins"
     consultant_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+      WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
     )
   );
 
@@ -92,14 +104,11 @@ CREATE POLICY "Consultores e admins podem criar oportunidades"
     consultant_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+      WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
     )
   );
 
 -- Update:
---   - The consultant themselves can update their own opportunities.
---   - Admin_ceo can update any opportunity (because only Marcel is admin_ceo, and he can update any).
---   - Admin_tech cannot update.
 CREATE POLICY "Consultor atualiza suas oportunidades e admin_ceo atualiza qualquer uma"
   ON public.opportunities FOR UPDATE
   TO authenticated
@@ -107,14 +116,14 @@ CREATE POLICY "Consultor atualiza suas oportunidades e admin_ceo atualiza qualqu
     consultant_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin_ceo'
+      WHERE id = auth.uid() AND role::text = 'admin_ceo'
     )
   )
   WITH CHECK (
     consultant_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin_ceo'
+      WHERE id = auth.uid() AND role::text = 'admin_ceo'
     )
   );
 
@@ -126,7 +135,7 @@ CREATE POLICY "Consultor deleta suas oportunidades e admin_ceo deleta qualquer u
     consultant_id = auth.uid()
     OR EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role = 'admin_ceo'
+      WHERE id = auth.uid() AND role::text = 'admin_ceo'
     )
   );
 
@@ -134,6 +143,8 @@ CREATE POLICY "Consultor deleta suas oportunidades e admin_ceo deleta qualquer u
 -- Drop existing policies
 DROP POLICY IF EXISTS "Colaboradores visíveis por usuários autenticados" ON public.calendar_collaborators;
 DROP POLICY IF EXISTS "Gestão de colaboradores por autenticados ou Admin" ON public.calendar_collaborators;
+DROP POLICY IF EXISTS "Colaboradores visíveis por dono ou admins ou pelos três admins específicos" ON public.calendar_collaborators;
+DROP POLICY IF EXISTS "Gestão de colaboradores por autenticados" ON public.calendar_collaborators;
 
 -- Create new policy for calendar_collaborators SELECT
 CREATE POLICY "Colaboradores visíveis por dono ou admins ou pelos três admins específicos"
@@ -143,21 +154,21 @@ CREATE POLICY "Colaboradores visíveis por dono ou admins ou pelos três admins 
     -- Admins (admin_ceo and admin_tech) can see all
     EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+      WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
     )
     OR
     -- Consultants can see the three specific admins and their own
     (
       EXISTS (
         SELECT 1 FROM public.profiles
-        WHERE id = auth.uid() AND role = 'consultant'
+        WHERE id = auth.uid() AND role::text = 'consultant'
       )
       AND (
         -- The collaborator's profile is one of the three specific admins
         EXISTS (
           SELECT 1 FROM public.profiles p
           WHERE p.id = calendar_collaborators.profile_id
-            AND p.email IN ('carlos@nexusflowtech.com.br','marcel@nexuxflowtech.com.br','patrikrodrigues@nexusflowtech.com.br')
+            AND p.email IN ('carlos@nexusflowtech.com.br','marcel@nexusflowtech.com.br','marcel@nexuxflowtech.com.br','patrikrodrigues@nexusflowtech.com.br')
         )
         OR
         -- Or the collaborator is the user's own
@@ -177,6 +188,7 @@ CREATE POLICY "Gestão de colaboradores por autenticados"
 -- Drop existing policies
 DROP POLICY IF EXISTS "Eventos visíveis por usuários autenticados" ON public.calendar_events;
 DROP POLICY IF EXISTS "Gestão de eventos por usuários autenticados" ON public.calendar_events;
+DROP POLICY IF EXISTS "Eventos visíveis por dono ou admins ou pelos três admins específicos" ON public.calendar_events;
 
 -- Select policy for calendar_events
 CREATE POLICY "Eventos visíveis por dono ou admins ou pelos três admins específicos"
@@ -186,14 +198,14 @@ CREATE POLICY "Eventos visíveis por dono ou admins ou pelos três admins espec�
     -- Admins (admin_ceo and admin_tech) can see all
     EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('admin_ceo', 'admin_tech')
+      WHERE id = auth.uid() AND role::text IN ('admin_ceo', 'admin_tech')
     )
     OR
     -- Consultants can see events of the three specific admins and their own collaborator
     (
       EXISTS (
         SELECT 1 FROM public.profiles
-        WHERE id = auth.uid() AND role = 'consultant'
+        WHERE id = auth.uid() AND role::text = 'consultant'
       )
       AND (
         -- The event's collaborator is one of the three specific admins
@@ -201,7 +213,7 @@ CREATE POLICY "Eventos visíveis por dono ou admins ou pelos três admins espec�
           SELECT 1 FROM public.calendar_collaborators cc
           JOIN public.profiles p ON cc.profile_id = p.id
           WHERE cc.id = calendar_events.collaborator_id
-            AND p.email IN ('carlos@nexusflowtech.com.br','marcel@nexuxflowtech.com.br','patrikrodrigues@nexusflowtech.com.br')
+            AND p.email IN ('carlos@nexusflowtech.com.br','marcel@nexusflowtech.com.br','marcel@nexuxflowtech.com.br','patrikrodrigues@nexusflowtech.com.br')
         )
         OR
         -- Or the event's collaborator is the user's own collaborator

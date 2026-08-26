@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CheckCircle, Mail, UserPlus, Zap } from 'lucide-react';
 
-export default function RegisterPage() {
+function RegisterFormContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -291,5 +291,21 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 animate-pulse flex items-center justify-center text-sm font-bold">
+            N
+          </div>
+        </div>
+      }
+    >
+      <RegisterFormContent />
+    </Suspense>
   );
 }

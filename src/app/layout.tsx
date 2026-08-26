@@ -3,6 +3,8 @@ import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider } from "@/lib/supabase/auth-context";
+import { FloatingSuggestionWidget } from "@/components/suggestions/FloatingSuggestionWidget";
+import { FloatingLeadCopilotWidget } from "@/components/copilot/FloatingLeadCopilotWidget";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,6 +32,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <AuthProvider>
             {children}
+            <FloatingLeadCopilotWidget />
+            <FloatingSuggestionWidget />
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -15,6 +15,7 @@ import {
   XCircle,
   Loader2,
   Clock,
+  Plus,
 } from 'lucide-react';
 
 export default function AdminInvitesPage() {

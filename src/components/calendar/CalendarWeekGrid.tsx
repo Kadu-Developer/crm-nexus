@@ -93,10 +93,10 @@ export function CalendarWeekGrid({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-[750px] overflow-x-auto bg-white dark:bg-slate-900 select-none">
-      {/* Cabeçalho das Colunas */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs">
-        <div className="w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 p-2 text-right">
+    <div className="flex-1 flex flex-col min-w-[750px] h-full overflow-y-auto overflow-x-auto bg-white dark:bg-slate-900 select-none">
+      {/* Cabeçalho das Colunas (Sticky Top dentro do mesmo scroll container) */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0">
+        <div className="w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 p-2 flex items-center justify-end">
           <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">GMT-3</span>
         </div>
 
@@ -137,7 +137,7 @@ export function CalendarWeekGrid({
       </div>
 
       {/* Grade de Horários */}
-      <div className="flex-1 relative flex overflow-y-auto max-h-[calc(100vh-12.5rem)]">
+      <div className="flex relative shrink-0">
         <div className="w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 select-none">
           {hoursArray.map((hour) => (
             <div

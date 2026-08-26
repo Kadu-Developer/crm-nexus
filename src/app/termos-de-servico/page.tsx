@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 export default function TermosDeServicoPage() {
   return (
@@ -75,21 +76,21 @@ export default function TermosDeServicoPage() {
             Você concorda em indenizar e isentar a Nexus Flow Tech, seus diretores, funcionários e agentes de e contra quaisquer reivindicações, responsabilidades, danos, perdas e despesas, incluindo honorários advocatícios razoáveis, decorrentes de ou relacionados à sua violação destes Termos de Serviço ou ao seu uso do CRM Nexus.
           </p>
 
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
             8. Alterações nos Termos
           </h3>
-          <p className="text-slate-600 dark:text-slate-300 mb-2>
+          <p className="text-slate-600 dark:text-slate-300 mb-2">
             Reservamo-nos o direito de modificar estes Termos de Serviço a qualquer momento. Publicaremos uma versão atualizada nesta página e a data de "Última atualização" será revisada conforme apropriado.
           </p>
 
-          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2>
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
             9. Lei Aplicável e Foro
           </h3>
-          <p className="text-slate-600 dark:text-slate-300 mb-2>
+          <p className="text-slate-600 dark:text-slate-300 mb-2">
             Estes Termos de Serviço serão regidos e interpretados de acordo com as leis da República Federativa do Brasil, sem considerar seus princípios de conflito de leis. Qualquer disputa relacionada a estes termos será submetida ao foro da comarca de [Cidade], [Estado], Brasil.
           </p>
 
-          <p className="text-slate-600 dark:text-slate-300>
+          <p className="text-slate-600 dark:text-slate-300">
             <strong>Última atualização:</strong> 26 de agosto de 2026
           </p>
         </div>

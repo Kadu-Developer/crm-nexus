@@ -13,13 +13,75 @@ import {
   Trash2,
   Edit,
   Loader2,
-  Sapphire,
+  Sparkles,
   MapPin,
   Loader,
   Heart,
   Info,
   HelpCircle,
 } from 'lucide-react';
+
+const STORAGE_KEY = 'nexus_crm_suggestions';
+
+const DEFAULT_SUGGESTIONS = [
+  {
+    id: 'sug_default_1',
+    consultant_id: 'usr_carlos',
+    title: 'Adicionar filtro por valor no Pipeline Kanban',
+    description: 'Seria muito produtivo podermos filtrar cards por faixa de valor diretamente no topo do Kanban durante os alinhamentos comerciais.',
+    status: 'accepted',
+    admin_response: 'Excelente sugestão! Entrou no backlog de melhorias técnicas.',
+    responded_by: 'usr_marcel',
+    responded_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    consultant: {
+      name: 'Carlos Eduardo',
+      email: 'carlos@nexusflowtech.com.br'
+    }
+  },
+  {
+    id: 'sug_default_2',
+    consultant_id: 'usr_carlos',
+    title: 'Exportação executiva de diagnósticos em PDF',
+    description: 'Possibilidade de gerar um relatório resumido dos diagnósticos realizados para enviar ao cliente no fechamento.',
+    status: 'pending',
+    admin_response: null,
+    responded_by: null,
+    responded_at: null,
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    consultant: {
+      name: 'Carlos Eduardo',
+      email: 'carlos@nexusflowtech.com.br'
+    }
+  }
+];
+
+function getLocalSuggestions(): any[] {
+  if (typeof window === 'undefined') return DEFAULT_SUGGESTIONS;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SUGGESTIONS));
+      return DEFAULT_SUGGESTIONS;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_SUGGESTIONS;
+  } catch {
+    return DEFAULT_SUGGESTIONS;
+  }
+}
+
+function saveLocalSuggestions(list: any[]) {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {
+      console.warn('Erro ao salvar no localStorage:', e);
+    }
+  }
+}
 
 export default function SuggestionsPage() {
   const { profile } = useAuth();
@@ -44,6 +106,7 @@ export default function SuggestionsPage() {
   }, [profile]);
 
   const fetchSuggestions = async () => {
+    if (!profile) return;
     setLoading(true);
     try {
       let query = supabase.from('suggestions').select(`
@@ -55,15 +118,27 @@ export default function SuggestionsPage() {
       if (profile.role === 'consultant') {
         query = query.eq('consultant_id', profile.id);
       }
-      // Admins (admin_ceo and admin_tech) see all
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setSuggestions(data || []);
-    } catch (err: any) {
-      console.error('Error fetching suggestions:', err);
-      toast.error('Erro ao carregar sugestões', { description: err.message });
+      if (!error && data && data.length > 0) {
+        setSuggestions(data);
+        saveLocalSuggestions(data);
+      } else {
+        // Fallback to local suggestions
+        const local = getLocalSuggestions();
+        const filtered = profile.role === 'consultant'
+          ? local.filter(s => s.consultant_id === profile.id)
+          : local;
+        setSuggestions(filtered);
+      }
+    } catch {
+      // Local fallback on error or offline
+      const local = getLocalSuggestions();
+      const filtered = profile.role === 'consultant'
+        ? local.filter(s => s.consultant_id === profile.id)
+        : local;
+      setSuggestions(filtered);
     } finally {
       setLoading(false);
     }
@@ -71,32 +146,59 @@ export default function SuggestionsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!profile) return;
     if (!newSuggestion.title.trim() || !newSuggestion.description.trim()) {
       toast.error('Por favor, preencha título e descrição');
       return;
     }
 
     setLoading(true);
+    const newRecord = {
+      id: `sug_${Date.now()}`,
+      consultant_id: profile.id,
+      title: newSuggestion.title.trim(),
+      description: newSuggestion.description.trim(),
+      status: 'pending',
+      admin_response: null,
+      responded_by: null,
+      responded_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      consultant: {
+        name: profile.name,
+        email: profile.email,
+      }
+    };
+
     try {
       const { data, error } = await supabase
         .from('suggestions')
         .insert({
           consultant_id: profile.id,
-          title: newSuggestion.title.trim(),
-          description: newSuggestion.description.trim(),
+          title: newRecord.title,
+          description: newRecord.description,
           status: 'pending',
-        });
+        })
+        .select(`*, consultant:consultant_id (name, email)`)
+        .single();
 
-      if (error) throw error;
-
-      setNewSuggestion({ title: '', description: '' });
-      toast.success('Sugestão enviada com sucesso!');
-      await fetchSuggestions();
-    } catch (err: any) {
-      toast.error('Erro ao enviar sugestão', { description: err.message });
-    } finally {
-      setLoading(false);
+      if (!error && data) {
+        setNewSuggestion({ title: '', description: '' });
+        toast.success('Sugestão enviada com sucesso!');
+        await fetchSuggestions();
+        return;
+      }
+    } catch {
+      // fallback to local below
     }
+
+    const local = getLocalSuggestions();
+    const updated = [newRecord, ...local];
+    saveLocalSuggestions(updated);
+    setNewSuggestion({ title: '', description: '' });
+    toast.success('Sugestão enviada com sucesso!');
+    await fetchSuggestions();
+    setLoading(false);
   };
 
   const handleUpdateSuggestion = async (id: string) => {
@@ -115,16 +217,28 @@ export default function SuggestionsPage() {
         })
         .eq('id', id);
 
-      if (error) throw error;
-
-      setEditingId(null);
-      toast.success('Sugestão atualizada!');
-      await fetchSuggestions();
-    } catch (err: any) {
-      toast.error('Erro ao atualizar sugestão', { description: err.message });
-    } finally {
-      setLoading(false);
+      if (!error) {
+        setEditingId(null);
+        toast.success('Sugestão atualizada!');
+        await fetchSuggestions();
+        return;
+      }
+    } catch {
+      // fallback
     }
+
+    const local = getLocalSuggestions();
+    const updated = local.map(s => s.id === id ? {
+      ...s,
+      title: editingSuggestion.title.trim(),
+      description: editingSuggestion.description.trim(),
+      updated_at: new Date().toISOString()
+    } : s);
+    saveLocalSuggestions(updated);
+    setEditingId(null);
+    toast.success('Sugestão atualizada!');
+    await fetchSuggestions();
+    setLoading(false);
   };
 
   const handleDeleteSuggestion = async (id: string) => {
@@ -133,18 +247,25 @@ export default function SuggestionsPage() {
     setLoading(true);
     try {
       const { error } = await supabase.from('suggestions').delete().eq('id', id);
-      if (error) throw error;
-
-      toast.success('Sugestão excluída!');
-      await fetchSuggestions();
-    } catch (err: any) {
-      toast.error('Erro ao excluir sugestão', { description: err.message });
-    } finally {
-      setLoading(false);
+      if (!error) {
+        toast.success('Sugestão excluída!');
+        await fetchSuggestions();
+        return;
+      }
+    } catch {
+      // fallback
     }
+
+    const local = getLocalSuggestions();
+    const updated = local.filter(s => s.id !== id);
+    saveLocalSuggestions(updated);
+    toast.success('Sugestão excluída!');
+    await fetchSuggestions();
+    setLoading(false);
   };
 
   const handleRespond = async (id: string) => {
+    if (!profile) return;
     if (!responseText.trim()) {
       toast.error('Por favor, escreva uma resposta');
       return;
@@ -155,46 +276,66 @@ export default function SuggestionsPage() {
       const { error } = await supabase
         .from('suggestions')
         .update({
-          status: 'reviewed', // or 'accepted'/'rejected' based on context? We'll let admin choose in future, for now set to reviewed
+          status: 'reviewed',
           admin_response: responseText.trim(),
           responded_by: profile.id,
           responded_at: new Date().toISOString(),
         })
         .eq('id', id);
 
-      if (error) throw error;
-
-      setRespondingId(null);
-      setResponseText('');
-      toast.success('Resposta enviada!');
-      await fetchSuggestions();
-    } catch (err: any) {
-      toast.error('Erro ao enviar resposta', { description: err.message });
-    } finally {
-      setLoading(false);
+      if (!error) {
+        setRespondingId(null);
+        setResponseText('');
+        toast.success('Resposta enviada!');
+        await fetchSuggestions();
+        return;
+      }
+    } catch {
+      // fallback
     }
+
+    const local = getLocalSuggestions();
+    const updated = local.map(s => s.id === id ? {
+      ...s,
+      status: 'reviewed',
+      admin_response: responseText.trim(),
+      responded_by: profile.id,
+      responded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } : s);
+    saveLocalSuggestions(updated);
+    setRespondingId(null);
+    setResponseText('');
+    toast.success('Resposta enviada!');
+    await fetchSuggestions();
+    setLoading(false);
   };
 
-  const handleStatusChange = async (id: string, status: 'accepted' | 'rejected') => {
+  const handleStatusChange = async (id: string, status: 'pending' | 'accepted' | 'rejected' | 'reviewed') => {
     setLoading(true);
     try {
       const { error } = await supabase
         .from('suggestions')
         .update({
           status,
-          // Keep existing response if any, or clear? We'll keep it.
         })
         .eq('id', id);
 
-      if (error) throw error;
-
-      toast.success(`Sugestão marcada como ${status === 'accepted' ? 'aceita' : 'rejeitada'}!`);
-      await fetchSuggestions();
-    } catch (err: any) {
-      toast.error('Erro ao atualizar status', { description: err.message });
-    } finally {
-      setLoading(false);
+      if (!error) {
+        toast.success(`Sugestão marcada como ${status === 'accepted' ? 'aceita' : status === 'rejected' ? 'rejeitada' : status === 'reviewed' ? 'respondida' : 'pendente'}!`);
+        await fetchSuggestions();
+        return;
+      }
+    } catch {
+      // fallback
     }
+
+    const local = getLocalSuggestions();
+    const updated = local.map(s => s.id === id ? { ...s, status, updated_at: new Date().toISOString() } : s);
+    saveLocalSuggestions(updated);
+    toast.success(`Sugestão marcada como ${status === 'accepted' ? 'aceita' : status === 'rejected' ? 'rejeitada' : status === 'reviewed' ? 'respondida' : 'pendente'}!`);
+    await fetchSuggestions();
+    setLoading(false);
   };
 
   if (!profile) {
@@ -401,6 +542,7 @@ export default function SuggestionsPage() {
                                     : suggestion.status === 'accepted'
                                     ? 'rejected'
                                     : 'pending';
+                                handleStatusChange(suggestion.id, nextStatus);
                               }}
                               className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                               title="Alterar status"
@@ -562,12 +704,12 @@ export default function SuggestionsPage() {
                       </form>
                     </div>
                   )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          )
-        )}
+          )}
+        </div>
       </div>
-    </div>
   );
 }

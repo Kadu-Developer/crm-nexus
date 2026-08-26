@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Opportunity, Segment, CompanySize, LeadSource, DecisionInfluence, ContactArea, PipelineStage } from '@/types/crm';
 import { calculateOpportunityScore } from '@/lib/mock-data';
 import { useAuth } from '@/lib/supabase/auth-context';
-import { X, Sparkles, AlertCircle, Building2, UserCircle2, Flame } from 'lucide-react';
+import { X, Sparkles, AlertCircle, Building2, UserCircle2, Flame, Search, Loader2, Globe2, Phone, Mail } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface QuickCaptureModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ interface FormData {
 
 export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModalProps) {
   const { profile } = useAuth();
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [formData, setFormData] = useState<FormData>(() => ({
     companyName: '',
     tradeName: '',
@@ -69,6 +71,54 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
     nextActionDescription: 'Enviar mensagem de introdução e agendar Pré-Diagnóstico',
     nextActionDate: getDefaultNextActionDate(),
   }));
+
+  const handleSearchCnpj = async () => {
+    const clean = formData.cnpj.replace(/\D/g, '');
+    if (!clean && !formData.companyName) {
+      toast.error('Digite um CNPJ ou Razão Social para buscar');
+      return;
+    }
+
+    setIsSearchingCnpj(true);
+    try {
+      const res = await fetch('/api/lead-enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cnpj: clean,
+          companyName: formData.companyName,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.data) {
+        const d = json.data;
+        const dossier = json.dossier;
+        const mainPartner = dossier?.socios?.[0];
+
+        setFormData((prev) => ({
+          ...prev,
+          companyName: d.razao_social || prev.companyName,
+          tradeName: d.nome_fantasia || d.razao_social || prev.tradeName,
+          cnpj: d.cnpj || prev.cnpj,
+          city: d.municipio || prev.city,
+          state: d.uf || prev.state,
+          contactPhone: dossier?.contatos_oficiais?.telefone_principal || d.ddd_telefone_1 || prev.contactPhone,
+          contactEmail: dossier?.contatos_oficiais?.email || d.email || prev.contactEmail,
+          contactName: mainPartner?.nome_socio || prev.contactName,
+          contactJobTitle: mainPartner?.qualificacao_socio || prev.contactJobTitle || 'Sócio-Administrador',
+          mainProblem: dossier?.gancho_de_abordagem || prev.mainProblem,
+        }));
+        toast.success(`Dados de ${d.nome_fantasia || d.razao_social} e contatos preenchidos automaticamente!`);
+      } else {
+        toast.error(json.error || 'Empresa não encontrada na Receita');
+      }
+    } catch {
+      toast.error('Erro na consulta pública do CNPJ');
+    } finally {
+      setIsSearchingCnpj(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -180,6 +230,52 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          {/* Consulta Rápida de CNPJ / Receita Federal */}
+          <div className="bg-blue-950/40 border border-blue-800/60 rounded-xl p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Globe2 className="w-3.5 h-3.5 text-blue-400" /> Preenchimento Automático via CNPJ / Receita
+              </label>
+              <span className="text-[10px] text-blue-300/70 font-medium">BrasilAPI • 100% Grátis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Digite o CNPJ da empresa (ex: 42.158.963/0001-52)..."
+                  value={formData.cnpj}
+                  onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchCnpj();
+                    }
+                  }}
+                  className="w-full bg-slate-900 border border-blue-900/60 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-400 font-mono"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSearchCnpj}
+                disabled={isSearchingCnpj}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                {isSearchingCnpj ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Buscando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Buscar Dados</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* Seção 1: Empresa */}
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">

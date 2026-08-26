@@ -86,11 +86,15 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPo
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {filteredClients.map((client) => (
-            <article key={client.id} className="border border-slate-200 bg-white p-5 transition-colors hover:border-[#24C9FF] dark:border-slate-800 dark:bg-slate-900">
+            <article
+              key={client.id}
+              onClick={() => onSelectOpportunity(client.nextAction)}
+              className="border border-slate-200 bg-white p-5 transition-all hover:border-[#24C9FF] hover:shadow-md dark:border-slate-800 dark:bg-slate-900 cursor-pointer rounded-xl group"
+            >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#052D72] text-white"><Building2 className="h-4 w-4" /></div>
-                  <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{client.name}</h3><p className="truncate text-xs text-slate-500 dark:text-slate-400">{client.legalName}</p><p className="mt-1 text-[11px] capitalize text-slate-500">{client.segment.replace(/_/g, ' ')} · {client.city}/{client.state}</p></div>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#052D72] text-white group-hover:bg-[#0757C9] transition-colors"><Building2 className="h-4 w-4" /></div>
+                  <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900 group-hover:text-[#0757C9] dark:text-white dark:group-hover:text-[#24C9FF] transition-colors">{client.name}</h3><p className="truncate text-xs text-slate-500 dark:text-slate-400">{client.legalName}</p><p className="mt-1 text-[11px] capitalize text-slate-500">{client.segment.replace(/_/g, ' ')} · {client.city}/{client.state}</p></div>
                 </div>
                 <span className="shrink-0 border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">{client.opportunities.length} {client.opportunities.length === 1 ? 'oportunidade' : 'oportunidades'}</span>
               </div>

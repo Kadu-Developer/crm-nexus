@@ -5,22 +5,51 @@
 -- 1. EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. ENUMS
-CREATE TYPE user_role AS ENUM ('admin_ceo', 'consultant', 'viewer');
-CREATE TYPE segment_type AS ENUM ('industria', 'varejo_ecom', 'servicos', 'tecnologia', 'saude', 'logistica', 'construcao', 'outro');
-CREATE TYPE company_size_type AS ENUM ('micro_1_9', 'pequena_10_49', 'media_50_199', 'grande_200_mais');
-CREATE TYPE lead_source_type AS ENUM ('linkedin', 'instagram', 'indicacao', 'evento', 'outbound', 'parceiro', 'site', 'pre_diagnostico', 'outro');
-CREATE TYPE contact_area_type AS ENUM ('diretoria_clevel', 'comercial', 'operacoes', 'ti_sistemas', 'financeiro', 'rh', 'outro');
-CREATE TYPE pipeline_stage_type AS ENUM (
-  'lead_identificado', 'primeiro_contato', 'contato_realizado',
-  'pre_diag_agendado', 'pre_diag_realizado', 'qualificado',
-  'diag_proposto', 'diag_contratado', 'diag_realizado',
-  'solucao_identificada', 'proposta_enviada', 'negociacao',
-  'fechado_ganho', 'fechado_perdido'
-);
+-- 2. ENUMS (com tratamento para já existentes)
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('admin_ceo', 'consultant', 'viewer');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE segment_type AS ENUM ('industria', 'varejo_ecom', 'servicos', 'tecnologia', 'saude', 'logistica', 'construcao', 'outro');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE company_size_type AS ENUM ('micro_1_9', 'pequena_10_49', 'media_50_199', 'grande_200_mais');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE lead_source_type AS ENUM ('linkedin', 'instagram', 'indicacao', 'evento', 'outbound', 'parceiro', 'site', 'pre_diagnostico', 'outro');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE contact_area_type AS ENUM ('diretoria_clevel', 'comercial', 'operacoes', 'ti_sistemas', 'financeiro', 'rh', 'outro');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE pipeline_stage_type AS ENUM (
+      'lead_identificado', 'primeiro_contato', 'contato_realizado',
+      'pre_diag_agendado', 'pre_diag_realizado', 'qualificado',
+      'diag_proposto', 'diag_contratado', 'diag_realizado',
+      'solucao_identificada', 'proposta_enviada', 'negociacao',
+      'fechado_ganho', 'fechado_perdido'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 3. PROFILES (Vinculado ao auth.users do Supabase)
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -34,8 +63,8 @@ CREATE TABLE public.profiles (
 );
 
 -- 4. COMPANIES
-CREATE TABLE public.companies (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS public.companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   corporate_name TEXT NOT NULL,
   trade_name TEXT,
   cnpj TEXT,
@@ -53,8 +82,8 @@ CREATE TABLE public.companies (
 );
 
 -- 5. CONTACTS
-CREATE TABLE public.contacts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS public.contacts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   job_title TEXT,
@@ -68,8 +97,8 @@ CREATE TABLE public.contacts (
 );
 
 -- 6. OPPORTUNITIES
-CREATE TABLE public.opportunities (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS public.opportunities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   consultant_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -91,8 +120,8 @@ CREATE TABLE public.opportunities (
 );
 
 -- 7. QUALIFICATIONS
-CREATE TABLE public.qualifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS public.qualifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   opportunity_id UUID NOT NULL UNIQUE REFERENCES public.opportunities(id) ON DELETE CASCADE,
   main_problem TEXT,
   impacted_area TEXT,
@@ -112,8 +141,8 @@ CREATE TABLE public.qualifications (
 );
 
 -- 8. ACTIVITIES
-CREATE TABLE public.activities (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS public.activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   opportunity_id UUID NOT NULL REFERENCES public.opportunities(id) ON DELETE CASCADE,
   consultant_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   activity_type TEXT NOT NULL,
@@ -148,13 +177,13 @@ $$ LANGUAGE sql SECURITY DEFINER;
 -- ------------------------------------------------------------------------------
 -- REGRAS RLS PARA PROFILES
 -- ------------------------------------------------------------------------------
--- Todos os autenticados podem ver perfis (para dropdowns de consultores)
+DROP POLICY IF EXISTS "Profiles são visíveis por usuários autenticados" ON public.profiles;
 CREATE POLICY "Profiles são visíveis por usuários autenticados"
   ON public.profiles FOR SELECT
   TO authenticated
   USING (true);
 
--- Usuário edita apenas seu próprio perfil, exceto admin que edita todos
+DROP POLICY IF EXISTS "Usuário atualiza seu próprio perfil" ON public.profiles;
 CREATE POLICY "Usuário atualiza seu próprio perfil"
   ON public.profiles FOR UPDATE
   TO authenticated
@@ -163,7 +192,7 @@ CREATE POLICY "Usuário atualiza seu próprio perfil"
 -- ------------------------------------------------------------------------------
 -- REGRAS RLS PARA OPPORTUNITIES
 -- ------------------------------------------------------------------------------
--- CEO vê todas as oportunidades. Consultor vê as dele (ou onde for responsável).
+DROP POLICY IF EXISTS "Oportunidades visíveis por Dono ou CEO" ON public.opportunities;
 CREATE POLICY "Oportunidades visíveis por Dono ou CEO"
   ON public.opportunities FOR SELECT
   TO authenticated
@@ -172,7 +201,7 @@ CREATE POLICY "Oportunidades visíveis por Dono ou CEO"
     OR public.is_admin_ceo()
   );
 
--- Inserção: consultores autenticados podem criar oportunidades
+DROP POLICY IF EXISTS "Consultores podem criar oportunidades" ON public.opportunities;
 CREATE POLICY "Consultores podem criar oportunidades"
   ON public.opportunities FOR INSERT
   TO authenticated
@@ -180,14 +209,14 @@ CREATE POLICY "Consultores podem criar oportunidades"
     consultant_id = auth.uid() OR public.is_admin_ceo()
   );
 
--- Atualização: Consultor atualiza suas próprias oportunidades, CEO atualiza qualquer uma
+DROP POLICY IF EXISTS "Consultor atualiza suas oportunidades" ON public.opportunities;
 CREATE POLICY "Consultor atualiza suas oportunidades"
   ON public.opportunities FOR UPDATE
   TO authenticated
   USING (consultant_id = auth.uid() OR public.is_admin_ceo())
   WITH CHECK (consultant_id = auth.uid() OR public.is_admin_ceo());
 
--- Deleção: Apenas CEO pode deletar oportunidades
+DROP POLICY IF EXISTS "Apenas CEO pode deletar oportunidades" ON public.opportunities;
 CREATE POLICY "Apenas CEO pode deletar oportunidades"
   ON public.opportunities FOR DELETE
   TO authenticated
@@ -196,12 +225,14 @@ CREATE POLICY "Apenas CEO pode deletar oportunidades"
 -- ------------------------------------------------------------------------------
 -- REGRAS RLS PARA COMPANIES & CONTACTS
 -- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Empresas visíveis por autenticados" ON public.companies;
 CREATE POLICY "Empresas visíveis por autenticados"
   ON public.companies FOR ALL
   TO authenticated
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Contatos visíveis por autenticados" ON public.contacts;
 CREATE POLICY "Contatos visíveis por autenticados"
   ON public.contacts FOR ALL
   TO authenticated
@@ -211,6 +242,7 @@ CREATE POLICY "Contatos visíveis por autenticados"
 -- ------------------------------------------------------------------------------
 -- REGRAS RLS PARA QUALIFICATIONS & ACTIVITIES
 -- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Qualificações gerenciadas pelo responsável ou CEO" ON public.qualifications;
 CREATE POLICY "Qualificações gerenciadas pelo responsável ou CEO"
   ON public.qualifications FOR ALL
   TO authenticated
@@ -222,6 +254,7 @@ CREATE POLICY "Qualificações gerenciadas pelo responsável ou CEO"
     )
   );
 
+DROP POLICY IF EXISTS "Atividades gerenciadas pelo responsável ou CEO" ON public.activities;
 CREATE POLICY "Atividades gerenciadas pelo responsável ou CEO"
   ON public.activities FOR ALL
   TO authenticated

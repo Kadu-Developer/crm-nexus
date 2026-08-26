@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 export default function PoliticaDePrivacidadePage() {
   return (
@@ -68,7 +69,7 @@ export default function PoliticaDePrivacidadePage() {
             Podemos atualizar esta Política de Privacidade periodicamente. Recomendamos que você reveja esta página ocasionalmente para se manter informado sobre como estamos protegendo suas informações.
           </p>
 
-          <p className="text-slate-600 dark:text-slate-300>
+          <p className="text-slate-600 dark:text-slate-300">
             <strong>Última atualização:</strong> 26 de agosto de 2026
           </p>
         </div>

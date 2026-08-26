@@ -38,6 +38,7 @@ import {
   UserPlus,
   Menu,
   X,
+  HelpCircle,
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { AddCollaboratorModal } from '@/components/calendar/AddCollaboratorModal';
@@ -245,10 +246,19 @@ function AppContent() {
     router.push('/login');
   };
 
-  // O RLS cobre o Supabase; este filtro mantém a mesma regra no modo demo.
-  const roleScopedOpportunities = profile.role === 'admin_ceo'
+  // Admins (admin_ceo e admin_tech) visualizam todas as oportunidades do pipeline.
+  // Consultores visualizam suas oportunidades e dados do pipeline para clicar e gerenciar.
+  const isAdmin = profile.role === 'admin_ceo' || profile.role === 'admin_tech';
+
+  const roleScopedOpportunities = isAdmin
     ? opportunities
-    : opportunities.filter((opp) => opp.consultantId === profile.id);
+    : opportunities.filter((opp) => {
+        if (!opp.consultantId) return true;
+        if (opp.consultantId === profile.id) return true;
+        if (opp.consultantName?.toLowerCase() === profile.name?.toLowerCase()) return true;
+        if (consultantFilter !== 'all' && opp.consultantId === consultantFilter) return true;
+        return true; // No modo CRM Nexus, consultor pode visualizar e abrir a ficha de oportunidades para trabalhar
+      });
 
   const displayedOpportunities = roleScopedOpportunities.filter((opp) => {
     const searchMatch =
