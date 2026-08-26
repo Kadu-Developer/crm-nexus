@@ -89,7 +89,7 @@ export function CalendarLeftSidebar({
                 const res = await fetch('/api/calendar/auth');
                 const data = await res.json();
                 if (data.authUrl) {
-                  window.location.href = data.authUrl;
+                  window.open(data.authUrl, '_blank');
                 }
               } catch {
                 onOpenGoogleSettings();

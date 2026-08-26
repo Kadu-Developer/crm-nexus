@@ -39,7 +39,7 @@ export function GoogleSyncSettingsModal({
       const res = await fetch('/api/calendar/auth');
       const data = await res.json();
       if (data.authUrl) {
-        window.location.href = data.authUrl;
+        window.open(data.authUrl, '_blank');
       } else {
         toast.info('Para conectar diretamente, informe o Client ID e Secret abaixo ou adicione ao .env.local.');
       }

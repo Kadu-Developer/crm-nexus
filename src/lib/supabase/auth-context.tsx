@@ -40,13 +40,41 @@ const findMockUser = (email: string): AppUser | undefined => {
   }
 
   // Fallback para novos emails corporativos
-  if (cleanEmail.includes('carlos') || cleanEmail.includes('kadu')) {
+  if (cleanEmail.includes('carlos') && !cleanEmail.includes('marcel') && !cleanEmail.includes('patrik')) {
+    // Carlos Eduardo (Tech Lead)
     return {
       id: 'usr_carlos',
       name: 'Carlos Eduardo',
       email: cleanEmail,
-      role: 'admin_ceo',
+      role: 'admin_tech',
       avatar: 'CE',
+      commissionRate: 0,
+      mustChangePassword: false,
+    };
+  }
+
+  // Fallback for other admins
+  if (cleanEmail.includes('marcel')) {
+    // Marcelo (CEO)
+    return {
+      id: 'usr_marcel',
+      name: 'Marcelo',
+      email: cleanEmail,
+      role: 'admin_ceo',
+      avatar: 'M',
+      commissionRate: 0,
+      mustChangePassword: false,
+    };
+  }
+
+  if (cleanEmail.includes('patrik')) {
+    // Patrik Rodrigues (Tech Lead)
+    return {
+      id: 'usr_patrik',
+      name: 'Patrik Rodrigues',
+      email: cleanEmail,
+      role: 'admin_tech',
+      avatar: 'PR',
       commissionRate: 0,
       mustChangePassword: false,
     };
@@ -105,7 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const email = authUser.email || '';
       const mustChange = authUser.user_metadata?.must_change_password ?? false;
-      const isAdmin = ['carlos@nexusflowtech.com.br', 'carlos@nexustechflow.com.br', 'diretoria@nexus.com.br', 'kaduesr@gmail.com'].includes(email.toLowerCase());
+      const isAdminCeo = email.toLowerCase() === 'marcel@nexuxflowtech.com.br';
+      const isAdminTech = ['carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br'].includes(email.toLowerCase());
 
       const { data: profileData } = await supabase
         .from('profiles')
@@ -118,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: profileData.id,
           name: profileData.name || authUser.user_metadata?.name || email.split('@')[0],
           email: profileData.email || email,
-          role: profileData.role || (isAdmin ? 'admin_ceo' : 'consultant'),
+          role: profileData.role || (isAdminCeo ? 'admin_ceo' : isAdminTech ? 'admin_tech' : 'consultant'),
           avatar: profileData.avatar_url || (profileData.name ? profileData.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'),
           commissionRate: profileData.commission_rate || 10,
           mustChangePassword: profileData.must_change_password ?? mustChange,
@@ -129,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Cria perfil automaticamente se não existir no banco
         const userName = authUser.user_metadata?.name || email.split('@')[0];
-        const userRole = isAdmin ? 'admin_ceo' : (authUser.user_metadata?.role || 'consultant');
+        const userRole = isAdminCeo ? 'admin_ceo' : isAdminTech ? 'admin_tech' : (authUser.user_metadata?.role || 'consultant');
 
         const newProfile = {
           id: authUser.id,

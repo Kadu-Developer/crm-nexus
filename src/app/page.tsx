@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { AddCollaboratorModal } from '@/components/calendar/AddCollaboratorModal';
+import SuggestionsPage from '@/app/suggestions/page';
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
@@ -311,6 +312,16 @@ function AppContent() {
           >
             <Building2 className="h-4 w-4" />
           </button>
+          <div className="my-1 h-px w-7 bg-white/20" />
+          <button
+            type="button"
+            onClick={() => router.push('/suggestions')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer text-white/70 hover:bg-white/10 hover:text-white"
+            aria-label="Sugestões"
+            title="Sugestões"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
         <button
           type="button"
@@ -533,7 +544,7 @@ function AppContent() {
             {/* Links de Navegação */}
             <div className="flex-1 overflow-y-auto p-3 space-y-1">
               <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Módulos</p>
-              
+
               <button
                 type="button"
                 onClick={() => {
@@ -612,6 +623,18 @@ function AppContent() {
               >
                 <Building2 className="w-4 h-4" />
                 <span>Carteira de Empresas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  router.push('/suggestions');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>Sugestões</span>
               </button>
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
