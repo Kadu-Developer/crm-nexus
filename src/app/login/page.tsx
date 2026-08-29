@@ -18,9 +18,11 @@ function LoginContent() {
   // Se já está autenticado, vai direto para o painel
   useEffect(() => {
     if (!isLoading && profile) {
-      router.replace('/');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
-  }, [isLoading, profile, router]);
+  }, [isLoading, profile]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,9 @@ function LoginContent() {
       toast.error('Erro de autenticação', { description: res.error });
     } else {
       toast.success('Bem-vindo ao CRM Nexus!', { description: 'Sessão iniciada com sucesso.' });
-      router.push('/');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }
   };
 
