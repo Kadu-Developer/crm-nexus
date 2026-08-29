@@ -365,7 +365,7 @@ function AppContent() {
             <div>
               <h1 className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1 sm:gap-1.5">
                 NEXUS{' '}
-                <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                <span className="hidden sm:inline-block text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">
                   CRM
                 </span>
               </h1>
@@ -457,7 +457,7 @@ function AppContent() {
           {/* Botão de Refresh Supabase */}
           <button
             onClick={loadPipelineData}
-            className={`p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer ${
+            className={`hidden sm:flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer ${
               loadingData ? 'animate-spin text-blue-500' : ''
             }`}
             title="Recarregar dados"
@@ -478,7 +478,7 @@ function AppContent() {
           {profile?.role === 'admin_ceo' && (
             <button
               onClick={() => setIsAddCollabOpen(true)}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 cursor-pointer shadow-xs"
+              className="hidden md:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 cursor-pointer shadow-xs"
               title="Cadastrar novo colaborador / consultor na equipe"
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -490,6 +490,7 @@ function AppContent() {
           <button
             onClick={() => setIsQuickCaptureOpen(true)}
             className="flex items-center gap-1.5 sm:gap-2 bg-[#F4510B] hover:bg-[#d94308] text-white font-bold text-xs px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 cursor-pointer"
+            title="Novo Lead (Quick)"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden xl:inline">Novo Lead (Quick)</span>
@@ -498,7 +499,7 @@ function AppContent() {
           {/* Botão de Logout */}
           <button
             onClick={handleLogout}
-            className="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 hover:text-rose-500 transition cursor-pointer"
+            className="hidden sm:flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 hover:text-rose-500 transition cursor-pointer"
             title="Sair do Sistema / Ir para Login"
           >
             <LogOut className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
