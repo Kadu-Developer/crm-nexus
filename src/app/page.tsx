@@ -347,7 +347,7 @@ function AppContent() {
 
       {/* Top Navbar Fixo */}
       <header className="fixed top-0 left-0 right-0 h-16 w-full max-w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 md:pl-[5.5rem] flex items-center justify-between z-30 transition-colors safe-area-inset-top">
-        <div className="flex items-center gap-2 sm:gap-6 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 shrink-0">
           {/* Botão Menu Sanduíche (Mobile) */}
           <button
             type="button"
@@ -373,7 +373,7 @@ function AppContent() {
           </div>
 
           {/* Seletor de Visão (Desktop) */}
-          <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl min-w-0">
+          <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl shrink-0">
             <button
               onClick={() => setCurrentView('kanban')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
@@ -422,9 +422,9 @@ function AppContent() {
         </div>
 
         {/* Direita: Perfil do Usuário, Busca, Filtro de Consultor, Tema e Botão Quick Capture */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-hidden">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Busca Rápida */}
-<div className="hidden md:block w-40 lg:w-44">
+          <div className="hidden md:block w-32 xl:w-44">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -438,7 +438,7 @@ function AppContent() {
           </div>
 
           {/* Indicador de Usuário */}
-          <div className="hidden sm:flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
+          <div className="hidden xl:flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
             {profile?.role === 'admin_ceo' ? (
               <ShieldCheck className="w-4 h-4 text-amber-500" />
             ) : (
@@ -492,7 +492,7 @@ function AppContent() {
             className="flex items-center gap-1.5 sm:gap-2 bg-[#F4510B] hover:bg-[#d94308] text-white font-bold text-xs px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Novo Lead (Quick)</span>
+            <span className="hidden xl:inline">Novo Lead (Quick)</span>
           </button>
 
           {/* Botão de Logout */}
