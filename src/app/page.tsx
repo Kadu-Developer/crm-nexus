@@ -352,7 +352,7 @@ function AppContent() {
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-center p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition md:hidden cursor-pointer shrink-0"
+            className="flex items-center justify-center p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition lg:hidden cursor-pointer shrink-0"
             aria-label="Abrir menu de navegação"
             title="Menu Sanduíche"
           >
@@ -508,7 +508,7 @@ function AppContent() {
 
       {/* Gaveta Lateral (Menu Sanduíche Mobile) */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
+        <div className="fixed inset-0 z-50 lg:hidden flex">
           {/* Backdrop com blur */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
@@ -756,7 +756,7 @@ function AppContent() {
       </main>
 
       {/* Barra de Navegação Inferior Fixa (Mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 h-16 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-1 py-1 shadow-lg pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 h-16 lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-1 py-1 shadow-lg pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
           onClick={() => setCurrentView('kanban')}
