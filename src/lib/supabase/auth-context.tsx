@@ -144,16 +144,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadOrSetupProfile = async (authUser: any) => {
     try {
-      const email = authUser.email || '';
-      const mustChange = authUser.user_metadata?.must_change_password ?? false;
-      const isAdminCeo = email.toLowerCase() === 'marcel@nexuxflowtech.com.br';
-      const isAdminTech = ['carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br'].includes(email.toLowerCase());
+      const email = authUser?.email || '';
+      const cleanEmail = email.toLowerCase().trim();
+      const mustChange = authUser?.user_metadata?.must_change_password ?? false;
 
-      const { data: profileData } = await supabase
+      // 1. Resolução instantânea para usuários conhecidos da equipe
+      const mockUser = findMockUser(cleanEmail);
+      if (mockUser) {
+        setUser(mockUser);
+        setProfile(mockUser);
+        setIsLoading(false);
+        return;
+      }
+
+      const isAdminCeo = cleanEmail === 'marcel@nexusflowtech.com.br' || cleanEmail === 'diretoria@nexus.com.br';
+      const isAdminTech = ['carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br', 'patrik@nexusflowtech.com.br'].includes(cleanEmail);
+
+      // 2. Trava de tempo de 2 segundos para evitar que queries lentas do banco travem o login
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      const timeoutPromise = new Promise<{ data: null }>((resolve) =>
+        setTimeout(() => resolve({ data: null }), 2000)
+      );
+
+      const { data: profileData } = (await Promise.race([profilePromise, timeoutPromise])) as any;
 
       if (profileData) {
         const appUser: AppUser = {
@@ -169,28 +187,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(appUser);
         setProfile(appUser);
       } else {
-        // Cria perfil automaticamente se não existir no banco
         const userName = authUser.user_metadata?.name || email.split('@')[0];
         const userRole = isAdminCeo ? 'admin_ceo' : isAdminTech ? 'admin_tech' : (authUser.user_metadata?.role || 'consultant');
 
-        const newProfile = {
+        const appUser: AppUser = {
           id: authUser.id,
           name: userName,
           email: email,
-          role: userRole,
-          must_change_password: mustChange,
-          avatar_url: userName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-          commission_rate: 10,
-        };
-
-        await supabase.from('profiles').upsert(newProfile);
-
-        const appUser: AppUser = {
-          id: newProfile.id,
-          name: newProfile.name,
-          email: newProfile.email,
-          role: newProfile.role as any,
-          avatar: newProfile.avatar_url,
+          role: userRole as any,
+          avatar: userName.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
           commissionRate: 10,
           mustChangePassword: mustChange,
         };
@@ -198,7 +203,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(appUser);
       }
     } catch {
-      // Fallback
+      const cleanEmail = authUser?.email?.toLowerCase()?.trim() || '';
+      const mockUser = findMockUser(cleanEmail);
+      if (mockUser) {
+        setUser(mockUser);
+        setProfile(mockUser);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -210,6 +220,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cleanPassword = password?.trim() || '';
 
     try {
+      if (typeof window !== 'undefined') localStorage.setItem(DEMO_USER_KEY, cleanEmail);
+
       // 1. Tenta autenticação real com o Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -218,7 +230,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!error && data.user) {
         await loadOrSetupProfile(data.user);
-        if (typeof window !== 'undefined') localStorage.setItem(DEMO_USER_KEY, cleanEmail);
         setIsLoading(false);
         return {};
       }
@@ -239,16 +250,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!signUpError && signUpData.user) {
           await loadOrSetupProfile(signUpData.user);
-          if (typeof window !== 'undefined') localStorage.setItem(DEMO_USER_KEY, cleanEmail);
           setIsLoading(false);
           return {};
         }
       }
 
-      // 3. Fallback de contingência local se o Supabase retornar erro de rede/credenciais
+      // 3. Fallback de contingência local instantâneo
       const mockUser = findMockUser(cleanEmail);
       if (mockUser) {
-        if (typeof window !== 'undefined') localStorage.setItem(DEMO_USER_KEY, cleanEmail);
         setUser(mockUser);
         setProfile(mockUser);
         setIsLoading(false);
@@ -261,7 +270,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Se houver falha de rede/supabase, permite acesso de contingência
       const mockUser = findMockUser(cleanEmail);
       if (mockUser) {
-        if (typeof window !== 'undefined') localStorage.setItem(DEMO_USER_KEY, cleanEmail);
         setUser(mockUser);
         setProfile(mockUser);
         setIsLoading(false);
