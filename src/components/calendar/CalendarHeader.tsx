@@ -91,7 +91,7 @@ export function CalendarHeader({
       {/* Direita: Modos de Visão, Opções de Exibição & Botão Novo Evento */}
       <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-1.5 sm:gap-2.5 shrink-0">
         {/* Seletor de Modo de Visão (Semana / Dia / Mês / Agenda) */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => onViewModeChange('week')}
