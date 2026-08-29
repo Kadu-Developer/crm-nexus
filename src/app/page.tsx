@@ -56,7 +56,7 @@ function AppContent() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddCollabOpen, setIsAddCollabOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar' | 'suggestions'>('kanban');
+  const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar' | 'suggestions'>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
   const [consultantFilter, setConsultantFilter] = useState<string>('all');
@@ -280,6 +280,15 @@ function AppContent() {
           <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={30} className="mb-2 h-8 w-7 object-contain" />
           <button
             type="button"
+            onClick={() => setCurrentView('dashboard')}
+            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'dashboard' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            aria-label="Abrir dashboard"
+            title="Dashboard"
+          >
+            <BarChart3 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setCurrentView('kanban')}
             className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'kanban' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             aria-label="Abrir pipeline"
@@ -304,15 +313,6 @@ function AppContent() {
             title="Agenda da Equipe (Google)"
           >
             <CalendarIcon className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentView('dashboard')}
-            className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'dashboard' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-            aria-label="Abrir dashboard"
-            title="Dashboard"
-          >
-            <BarChart3 className="h-4 w-4" />
           </button>
           <div className="my-1 h-px w-7 bg-white/20" />
           <button
@@ -360,7 +360,7 @@ function AppContent() {
           </button>
 
           {/* Logo Nexus */}
-          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0" onClick={() => setCurrentView('kanban')}>
+          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0" onClick={() => setCurrentView('dashboard')}>
             <Image src="/assets/logos/logo-shield-symbol.png" alt="Nexus Flow Tech" width={200} height={138} className="h-7 sm:h-8 w-auto object-contain" priority sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, 140px" />
             <div>
               <h1 className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1 sm:gap-1.5">
@@ -374,6 +374,17 @@ function AppContent() {
 
           {/* Seletor de Visão (Desktop) */}
           <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl shrink-0">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                currentView === 'dashboard'
+                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}</span>
+            </button>
             <button
               onClick={() => setCurrentView('kanban')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
@@ -406,17 +417,6 @@ function AppContent() {
             >
               <CalendarIcon className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">Agenda</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                currentView === 'dashboard'
-                  ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}</span>
             </button>
           </nav>
         </div>
@@ -760,6 +760,16 @@ function AppContent() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 h-16 lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-1 py-1 shadow-lg pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
+          onClick={() => setCurrentView('dashboard')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-lg transition-colors cursor-pointer ${
+            currentView === 'dashboard' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <BarChart3 className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">Dashboard</span>
+        </button>
+        <button
+          type="button"
           onClick={() => setCurrentView('kanban')}
           className={`flex flex-col items-center justify-center flex-1 py-1 rounded-lg transition-colors cursor-pointer ${
             currentView === 'kanban' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'
@@ -787,16 +797,6 @@ function AppContent() {
         >
           <CalendarIcon className="w-5 h-5 mb-0.5" />
           <span className="text-[10px]">Agenda</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setCurrentView('dashboard')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-lg transition-colors cursor-pointer ${
-            currentView === 'dashboard' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'
-          }`}
-        >
-          <BarChart3 className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">Dashboard</span>
         </button>
         <button
           type="button"

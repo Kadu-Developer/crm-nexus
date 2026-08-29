@@ -25,6 +25,15 @@ export default function AppSidebar({ currentView }: AppSidebarProps) {
         <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={30} className="mb-2 h-8 w-7 object-contain" />
         <button
           type="button"
+          onClick={() => router.push('/dashboard')}
+          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'dashboard' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+          aria-label="Abrir dashboard"
+          title="Dashboard"
+        >
+          <BarChart3 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
           onClick={() => router.push('/')}
           className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'kanban' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           aria-label="Abrir pipeline"
@@ -49,15 +58,6 @@ export default function AppSidebar({ currentView }: AppSidebarProps) {
           title="Agenda da Equipe (Google)"
         >
           <CalendarIcon className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push('/dashboard')}
-          className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'dashboard' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-          aria-label="Abrir dashboard"
-          title="Dashboard"
-        >
-          <BarChart3 className="h-4 w-4" />
         </button>
         <div className="my-1 h-px w-7 bg-white/20" />
         <button

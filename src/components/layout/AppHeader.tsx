@@ -72,6 +72,13 @@ export default function AppHeader() {
         {/* Seletor de Visão (Desktop) */}
         <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl shrink-0">
           <button
+            onClick={() => router.push('/dashboard')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${currentView === 'dashboard' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            Dashboard
+          </button>
+          <button
             onClick={() => router.push('/')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${currentView === '' || currentView === 'kanban' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
           >
@@ -91,13 +98,6 @@ export default function AppHeader() {
           >
             <CalendarIcon className="w-3.5 h-3.5" />
             Agenda
-          </button>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${currentView === 'dashboard' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            Dashboard
           </button>
         </nav>
       </div>
