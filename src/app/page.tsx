@@ -347,7 +347,7 @@ function AppContent() {
 
       {/* Top Navbar Fixo */}
       <header className="fixed top-0 left-0 right-0 h-16 w-full max-w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 md:pl-[5.5rem] flex items-center justify-between z-30 transition-colors safe-area-inset-top">
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-6 min-w-0 overflow-hidden">
           {/* Botão Menu Sanduíche (Mobile) */}
           <button
             type="button"
