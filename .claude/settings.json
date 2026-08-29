@@ -1,10 +1,33 @@
 {
-  "enabledPlugins": {
-    "claude-code-setup@claude-plugins-official": true
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://192.168.18.209:20128/v1",
+    "ANTHROPIC_AUTH_TOKEN": "d88a9d1f84d8be874f41f0ade0b56a3041d3027d25ccd43f",
+    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "ANTHROPIC_MODEL": "auto",
+    "ANTHROPIC_DEFAULT_FABLE_MODEL": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "nvidia/openai/gpt-oss-20b",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "nvidia/nvidia/nemotron-3-super-120b-a12b",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "nvidia/nemotron-3-ultra-550b-a55b",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "200000"
   },
-  "permissions": {
-    "allow": [
-      "bash"
-    ]
-  }
+   "teammateMode": "tmux",
+  "enabledPlugins": {
+    "ecc@ecc": true,
+    "slack@claude-plugins-official": true,
+    "monday-crm@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "andrej-karpathy-skills@karpathy-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "karpathy-skills": { "source": { "source": "github", "repo": "forrestchang/andrej-karpathy-skills" } },
+    "ecc": { "source": { "source": "git", "url": "https://github.com" } },
+    "ruflo": { "source": { "source": "github", "repo": "ruvnet/ruflo" } }
+  },
+  "language": "Português-BR",
+  "sandbox": { "network": { "allowedDomains": ["github.com", "*.npmjs.org"], "deniedDomains": [] } },
+  "effortLevel": "xhigh",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "auto"
 }
