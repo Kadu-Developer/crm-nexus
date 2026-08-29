@@ -321,7 +321,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         />
 
         {/* Área Central (Semana, Dia, Mês ou Lista) */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950/50">
+        <main className="flex-1 flex flex-col overflow-x-auto overflow-y-auto bg-slate-50/50 dark:bg-slate-950/50 min-w-0">
           {viewMode === 'week' && (
             <CalendarWeekGrid
               currentDate={selectedDate}
