@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
 import { Opportunity } from '@/types/crm';
-import { X, Calendar, Clock, Video, Flame, Users, Repeat, Sparkles, Check } from 'lucide-react';
+import { X, Calendar, Clock, Video, Flame, Users, Repeat, Sparkles, Check, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/supabase/auth-context';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -29,10 +30,21 @@ export function EventModal({
   opportunities = [],
   isAdmin = false,
 }: EventModalProps) {
+  const { profile } = useAuth();
+  const isUserAdmin = isAdmin || profile?.role === 'admin_ceo' || profile?.role === 'admin_tech' || profile?.role?.startsWith('admin');
+
+  // Identifica a conta do usuário logado
+  const myAccount = accounts.find(
+    (a) =>
+      a.id === profile?.id ||
+      a.email?.toLowerCase() === profile?.email?.toLowerCase() ||
+      a.name?.toLowerCase() === profile?.name?.toLowerCase()
+  ) || accounts[0];
+
   const [title, setTitle] = useState('');
   const [collaboratorName, setCollaboratorName] = useState('');
   const [description, setDescription] = useState('');
-  const [collaboratorId, setCollaboratorId] = useState<string>(accounts[0]?.id || 'collab_carlos');
+  const [collaboratorId, setCollaboratorId] = useState<string>(myAccount?.id || accounts[0]?.id || 'collab_carlos');
   const [additionalCollaboratorIds, setAdditionalCollaboratorIds] = useState<string[]>([]);
   const [categoryId, setCategoryId] = useState('tech_alignment');
   const [dateStr, setDateStr] = useState('');
@@ -42,16 +54,14 @@ export function EventModal({
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [linkedOpportunityId, setLinkedOpportunityId] = useState<string>('');
 
-  // Quando o consultor muda o colaborador responsável, atualiza o título automaticamente
+  // Quando o colaborador muda, se não for admin, mantém travado
   const handleCollaboratorChange = (id: string) => {
+    if (!isUserAdmin) return;
     setCollaboratorId(id);
-    if (!isAdmin) {
-      const acc = accounts.find((a) => a.id === id);
-      const name = acc?.name || '';
-      // Remove prefixo antigo do colaborador, se houver
-      const cleaned = title.replace(/^[^\s:]+:\s*/, '').trim();
-      setTitle(name ? `${name}: ${cleaned}` : cleaned);
-    }
+    const acc = accounts.find((a) => a.id === id);
+    const name = acc?.name || '';
+    const cleaned = title.replace(/^[^\s:]+:\s*/, '').trim();
+    setTitle(name ? `${name}: ${cleaned}` : cleaned);
   };
 
   useEffect(() => {
@@ -59,7 +69,11 @@ export function EventModal({
       if (initialEvent) {
         setTitle(initialEvent.title || '');
         setDescription(initialEvent.description || '');
-        setCollaboratorId(initialEvent.collaboratorId || initialEvent.ctoId || accounts[0]?.id || 'collab_carlos');
+        // Se não for admin, mantém o responsável original ou a conta própria
+        const defaultCollab = isUserAdmin
+          ? (initialEvent.collaboratorId || initialEvent.ctoId || myAccount?.id || accounts[0]?.id)
+          : (initialEvent.collaboratorId || myAccount?.id || accounts[0]?.id);
+        setCollaboratorId(defaultCollab);
         setAdditionalCollaboratorIds(initialEvent.additionalCollaboratorIds || []);
         setCategoryId(initialEvent.categoryId || 'tech_alignment');
         setMeetUrl(initialEvent.meetUrl || '');
@@ -84,11 +98,12 @@ export function EventModal({
       } else {
         setTitle('');
         setDescription('');
-        setCollaboratorId(accounts[0]?.id || 'collab_carlos');
+        // Para novos eventos, se não for admin, o responsável SEMPRE é o criador logado
+        const initialCollabId = isUserAdmin ? (accounts[0]?.id || 'collab_carlos') : (myAccount?.id || accounts[0]?.id);
+        setCollaboratorId(initialCollabId);
         setAdditionalCollaboratorIds([]);
-        if (!isAdmin) {
-          const acc = accounts[0];
-          const name = acc?.name || '';
+        if (!isUserAdmin) {
+          const name = myAccount?.name || accounts[0]?.name || '';
           setCollaboratorName(name);
           setTitle(name ? `${name}: ` : '');
         }
@@ -101,7 +116,7 @@ export function EventModal({
         setLinkedOpportunityId('');
       }
     }
-  }, [isOpen, initialEvent, accounts]);
+  }, [isOpen, initialEvent, accounts, profile, isUserAdmin, myAccount]);
 
   if (!isOpen) return null;
 
@@ -221,14 +236,24 @@ export function EventModal({
 
           {/* Seleção do Colaborador Responsável */}
           <div className="space-y-1.5">
-            <label className="block font-bold text-slate-700 dark:text-slate-300">
-              Responsável Principal na Agenda Google *
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block font-bold text-slate-700 dark:text-slate-300">
+                Responsável Principal na Agenda Google *
+              </label>
+              {!isUserAdmin && (
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  <Lock className="w-3 h-3" /> Exclusivo ADM
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
               <button
                 type="button"
+                disabled={!isUserAdmin}
                 onClick={() => setCollaboratorId('all_team')}
-                className={`p-2 rounded-xl border text-left flex items-center gap-2 transition cursor-pointer ${
+                className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
+                  !isUserAdmin ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                } ${
                   collaboratorId === 'all_team'
                     ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold'
                     : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400'
@@ -244,10 +269,13 @@ export function EventModal({
                 <button
                   key={acc.id}
                   type="button"
-                  onClick={() => setCollaboratorId(acc.id)}
-                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition cursor-pointer ${
+                  disabled={!isUserAdmin && acc.id !== collaboratorId}
+                  onClick={() => handleCollaboratorChange(acc.id)}
+                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
+                    !isUserAdmin && acc.id !== collaboratorId ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                  } ${
                     collaboratorId === acc.id
-                      ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold'
+                      ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold ring-1 ring-blue-500/30'
                       : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400'
                   }`}
                 >
@@ -264,6 +292,11 @@ export function EventModal({
                 </button>
               ))}
             </div>
+            {!isUserAdmin && (
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                ℹ️ O criador do evento é definido automaticamente como responsável principal. Apenas Administradores podem selecionar outro colaborador.
+              </p>
+            )}
           </div>
 
           {/* Outros Membros da Equipe Participando */}

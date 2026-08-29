@@ -453,6 +453,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         accounts={accounts}
         categories={categories}
         opportunities={opportunities}
+        isAdmin={isAdmin}
       />
 
       <EventDetailModal
