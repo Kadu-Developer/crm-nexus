@@ -386,6 +386,46 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         />
       </div>
 
+      {/* Dock Flutuante de Visão para Mobile (Estilo iOS / Ref Image) */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 sm:hidden flex items-center gap-1 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 dark:border-slate-800 p-1.5 rounded-full shadow-2xl shadow-black/50 ring-1 ring-white/10">
+        <button
+          type="button"
+          onClick={() => setViewMode('agenda')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'agenda' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Lista
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('day')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'day' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Dia
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('week')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'week' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Semana
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('month')}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'month' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Mês
+        </button>
+      </div>
+
       {/* Modais */}
       <EventModal
         isOpen={isEventModalOpen}

@@ -98,27 +98,27 @@ export function CalendarWeekGrid({
           {weekDays.map((day, idx) => {
             const isToday = isSameDay(day, today);
             const isSelected = isSameDay(day, currentDate);
-            const dayName = day.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+            const dayName = day.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase().replace('.', '');
             const dayNumber = day.getDate();
 
             return (
               <div
                 key={idx}
-                className={`py-2 px-1 text-center border-r border-slate-200 dark:border-slate-800 last:border-r-0 transition ${
-                  isToday ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                className={`py-2 px-1 text-center border-r border-slate-200 dark:border-slate-800/80 last:border-r-0 transition ${
+                  isToday ? 'bg-lime-500/10 dark:bg-lime-500/5' : ''
                 }`}
               >
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-1">
                   {dayName}
                 </div>
-                <div className="mt-0.5 inline-flex items-center justify-center">
+                <div className="inline-flex items-center justify-center">
                   <span
-                    className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                    className={`h-8 w-8 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
                       isToday
-                        ? 'bg-blue-600 text-white font-black shadow-xs shadow-blue-500/40'
+                        ? 'bg-[#A3E635] text-slate-950 font-black shadow-md shadow-lime-500/30 scale-105'
                         : isSelected
-                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white'
-                        : 'text-slate-800 dark:text-slate-200'
+                        ? 'bg-blue-600 text-white font-bold shadow-xs'
+                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     {dayNumber}
@@ -165,8 +165,8 @@ export function CalendarWeekGrid({
               className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
               style={{ top: `${nowTopPosition}px` }}
             >
-              <div className="w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-cyan-400 -ml-1.5 shadow-sm animate-pulse" />
-              <div className="flex-1 h-0.5 bg-blue-600 dark:bg-cyan-400 shadow-sm" />
+              <div className="w-3 h-3 rounded-full bg-[#A3E635] -ml-1.5 shadow-md shadow-lime-500/50 ring-2 ring-lime-400/30 animate-pulse shrink-0" />
+              <div className="flex-1 h-0.5 bg-gradient-to-r from-[#A3E635] via-lime-400 to-blue-500/30 shadow-xs" />
             </div>
           )}
 
