@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "name": "Development Team",
+  "goal": "A sessão principal é o **Team Lead/Orchestrator**. Ela coordena os teammates e nunca deve delegar a responsabilidade final de integração",
+  "mode": "chain",
+  "lead": "project-analyst-docs",
+  "leadRole": null,
+  "sequential": true,
+  "loop": {
+    "maxIterations": 12,
+    "stop": "all-assignments-done"
+  },
+  "members": [
+    {
+      "agent": "pesquisador-de-ux",
+      "name": "Pesquisador de UX",
+      "assignment": "Validação de usabilidade, síntese de feedbacks de usuários e refinamento de fluxos de experiência do produto.",
+      "available": true
+    },
+    {
+      "agent": "project-analyst-docs",
+      "name": "project-analyst-docs",
+      "assignment": "Quebrar demandas em etapas. Distribuir a arquitetura ao Tech Lead, testes aos devs/QA e refinamento ao UX. Conduzir revisões de código e segurança, consolidando o resultado final antes da entrega com riscos e prioridades alinhados.",
+      "available": true
+    },
+    {
+      "agent": "tech-lead",
+      "name": "Tech Lead",
+      "assignment": "Definir a arquitetura do sistema, garantir coerência técnica entre os módulos e consolidar as entregas dos desenvolvedores.",
+      "available": true
+    },
+    {
+      "agent": "agente-de-testes-unitarios",
+      "name": "Agente de testes unitários",
+      "assignment": "Criação de suítes de testes unitários automatizados, cobertura de código e refatoração voltada a testabilidade.",
+      "available": true
+    },
+    {
+      "agent": "revisor-de-codigo",
+      "name": "Revisor de Código",
+      "assignment": "arantia de padrões de código (clean code), identificação de gargalos de performance e mitigação de breaking changes.",
+      "available": true
+    },
+    {
+      "agent": "analista-de-qa",
+      "name": "Analista de QA",
+      "assignment": "Elaboração de cenários de teste E2E, casos de borda, critérios de aceitação e fluxos de regressão.",
+      "available": true
+    },
+    {
+      "agent": "auditor-de-seguranca",
+      "name": "Auditor de Segurança",
+      "assignment": "Análise estática/dinâmica de vulnerabilidades (SAST/DAST), revisão de dependências e checagem de conformidade de segurança.",
+      "available": true
+    }
+  ]
+}
