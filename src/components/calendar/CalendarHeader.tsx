@@ -138,14 +138,14 @@ export function CalendarHeader({
           </button>
         </div>
 
-        {/* Botão Novo Evento CTA */}
+        {/* Botão Novo Evento CTA (Exibido no Desktop; no Mobile fica integrado no Dock Flutuante) */}
         <button
           type="button"
           onClick={onNewEvent}
-          className="inline-flex items-center gap-1 sm:gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg shadow-sm shadow-blue-600/30 transition cursor-pointer shrink-0"
+          className="hidden sm:inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm shadow-blue-600/30 transition cursor-pointer shrink-0"
         >
           <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>+ Novo Evento</span>
+          <span>Novo Evento</span>
         </button>
       </div>
     </header>

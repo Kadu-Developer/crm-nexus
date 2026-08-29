@@ -24,6 +24,7 @@ import { GoogleSyncSettingsModal } from './GoogleSyncSettingsModal';
 import { AddCollaboratorModal } from './AddCollaboratorModal';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/supabase/auth-context';
+import { Plus } from 'lucide-react';
 
 interface CalendarModuleProps {
   opportunities?: Opportunity[];
@@ -386,12 +387,12 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         />
       </div>
 
-      {/* Dock Flutuante de Visão para Mobile (Estilo iOS / Ref Image) */}
+      {/* Dock Flutuante de Visão & Novo Evento para Mobile (Estilo iOS / Ref Image) */}
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 sm:hidden flex items-center gap-1 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 dark:border-slate-800 p-1.5 rounded-full shadow-2xl shadow-black/50 ring-1 ring-white/10">
         <button
           type="button"
           onClick={() => setViewMode('agenda')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             viewMode === 'agenda' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
           }`}
         >
@@ -400,7 +401,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         <button
           type="button"
           onClick={() => setViewMode('day')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             viewMode === 'day' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
           }`}
         >
@@ -409,7 +410,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         <button
           type="button"
           onClick={() => setViewMode('week')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             viewMode === 'week' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
           }`}
         >
@@ -418,11 +419,24 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         <button
           type="button"
           onClick={() => setViewMode('month')}
-          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+          className={`px-2.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             viewMode === 'month' ? 'bg-[#A3E635] text-slate-950 shadow-md font-black' : 'text-slate-300 hover:text-white'
           }`}
         >
           Mês
+        </button>
+
+        {/* Divisor vertical */}
+        <div className="w-px h-4 bg-slate-700 mx-0.5" />
+
+        {/* Botão Novo Evento Integrado */}
+        <button
+          type="button"
+          onClick={handleNewEvent}
+          className="px-3 py-1.5 rounded-full text-xs font-black bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/40 flex items-center gap-1 active:scale-95 transition-all cursor-pointer shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <span>Evento</span>
         </button>
       </div>
 
