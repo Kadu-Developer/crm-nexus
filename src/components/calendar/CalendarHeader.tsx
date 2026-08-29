@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CalendarViewMode } from '@/types/calendar';
-import { ChevronLeft, ChevronRight, Plus, SlidersHorizontal, Calendar as CalendarIcon, Clock, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -12,8 +12,6 @@ interface CalendarHeaderProps {
   onNavigateNext: () => void;
   onNavigateToday: () => void;
   onNewEvent: () => void;
-  showWeekends: boolean;
-  onToggleWeekends: () => void;
 }
 
 export function CalendarHeader({
@@ -24,8 +22,6 @@ export function CalendarHeader({
   onNavigateNext,
   onNavigateToday,
   onNewEvent,
-  showWeekends,
-  onToggleWeekends,
 }: CalendarHeaderProps) {
   const monthNames = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -97,21 +93,6 @@ export function CalendarHeader({
 
       {/* Direita: Modos de Visão, Opções de Exibição & Botão Novo Evento */}
       <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-        {/* Toggle Fins de Semana */}
-        <button
-          type="button"
-          onClick={onToggleWeekends}
-          className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer active:scale-95 ${
-            showWeekends
-              ? 'border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-          title="Alternar exibição de sábado e domingo"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span>Fins de semana</span>
-        </button>
-
         {/* Seletor de Modo de Visão (Semana / Dia / Mês / Agenda) */}
         <div className="flex items-center bg-slate-100 dark:bg-slate-950 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
           <button

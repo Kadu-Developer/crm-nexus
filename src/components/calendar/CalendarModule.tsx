@@ -35,7 +35,6 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
-  const [showWeekends, setShowWeekends] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -248,7 +247,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     const visibleCategoryIds = new Set(categories.filter((c) => c.isVisible).map((c) => c.id));
 
     return events.filter((e) => {
-      // 1. Filtro de Colaborador (se desmarcado no painel, oculta imediatamente)
+      // Filtro de Colaborador (se desmarcado no painel, oculta imediatamente)
       if (accounts.length > 0) {
         const collabId = e.collaboratorId || e.ctoId || 'collab_carlos';
         const isMainOwnerVisible = visibleAccountIds.has(collabId) || collabId === 'all_team';
@@ -259,14 +258,14 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         }
       }
 
-      // 2. Filtro de Categoria (se desmarcado no painel, oculta imediatamente)
+      // Filtro de Categoria (se desmarcado no painel, oculta imediatamente)
       if (categories.length > 0 && e.categoryId) {
         if (!visibleCategoryIds.has(e.categoryId)) {
           return false;
         }
       }
 
-      // 3. Filtro de Busca
+      // Filtro de Busca
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesTitle = e.title.toLowerCase().includes(q);
@@ -300,8 +299,6 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         onNavigateNext={handleNavigateNext}
         onNavigateToday={handleNavigateToday}
         onNewEvent={handleNewEvent}
-        showWeekends={showWeekends}
-        onToggleWeekends={() => setShowWeekends(!showWeekends)}
       />
 
       {/* Layout Motion com 3 Painéis */}
@@ -331,7 +328,6 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
               events={filteredEvents}
               accounts={accounts}
               categories={categories}
-              showWeekends={showWeekends}
               onSelectEvent={handleSelectEvent}
               onCreateSlotEvent={handleCreateSlotEvent}
               onOpenOpportunity={handleOpenLeadDetailFromOppId}

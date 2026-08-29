@@ -9,7 +9,6 @@ interface CalendarWeekGridProps {
   events: CalendarEvent[];
   accounts: CollaboratorAccount[];
   categories: CalendarCategory[];
-  showWeekends: boolean;
   onSelectEvent: (event: CalendarEvent) => void;
   onCreateSlotEvent: (dateStr: string, hour: number) => void;
   onOpenOpportunity?: (opportunityId: string) => void;
@@ -20,7 +19,6 @@ export function CalendarWeekGrid({
   events,
   accounts,
   categories,
-  showWeekends,
   onSelectEvent,
   onCreateSlotEvent,
   onOpenOpportunity,
@@ -40,10 +38,6 @@ export function CalendarWeekGrid({
       const d = new Date(current);
       d.setDate(diff + i);
       weekDays.push(d);
-    }
-
-    if (!showWeekends) {
-      return weekDays.filter((_, idx) => idx >= 1 && idx <= 5);
     }
     return weekDays;
   };
