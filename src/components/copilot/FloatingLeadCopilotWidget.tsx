@@ -404,7 +404,7 @@ export function FloatingLeadCopilotWidget() {
   return (
     <>
       {/* Botão Flutuante Exclusivo do Copilot AI (Posicionado diretamente acima de Sugestões) */}
-      <aside aria-label="Nexus Copilot AI" className="group fixed bottom-32 lg:bottom-[5.5rem] right-6 z-50 flex items-center justify-end">
+      <aside aria-label="Nexus Copilot AI" className="group fixed bottom-48 sm:bottom-36 lg:bottom-[5.5rem] right-4 sm:right-6 z-50 flex items-center justify-end">
         {/* Tooltip revelado somente no hover */}
         {!isOpen && (
           <div

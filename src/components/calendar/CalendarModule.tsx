@@ -388,7 +388,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       </div>
 
       {/* Dock Flutuante de Visão & Novo Evento para Mobile (Estilo iOS / Ref Image) */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 sm:hidden flex items-center gap-1 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 dark:border-slate-800 p-1.5 rounded-full shadow-2xl shadow-black/50 ring-1 ring-white/10">
+      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-40 sm:hidden flex items-center gap-1 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-xl border border-slate-700/80 dark:border-slate-800 p-1.5 rounded-full shadow-2xl shadow-black/50 ring-1 ring-white/10 max-w-[95vw]">
         <button
           type="button"
           onClick={() => setViewMode('agenda')}
