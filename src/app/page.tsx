@@ -361,7 +361,7 @@ function AppContent() {
 
           {/* Logo Nexus */}
           <div className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none shrink-0" onClick={() => setCurrentView('kanban')}>
-            <Image src="/assets/logos/logo-shield-symbol.png" alt="Nexus Flow Tech" width={350} height={138} className="h-7 sm:h-8 w-auto object-contain" priority />
+            <Image src="/assets/logos/logo-shield-symbol.png" alt="Nexus Flow Tech" width={200} height={138} className="h-7 sm:h-8 w-auto object-contain" priority sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, 140px" />
             <div>
               <h1 className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1 sm:gap-1.5">
                 NEXUS{' '}
