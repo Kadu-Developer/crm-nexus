@@ -347,7 +347,7 @@ function AppContent() {
 
       {/* Top Navbar Fixo */}
       <header className="fixed top-0 left-0 right-0 h-16 w-full max-w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 md:pl-[5.5rem] flex items-center justify-between z-30 transition-colors safe-area-inset-top">
-        <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {/* Botão Menu Sanduíche (Mobile) */}
           <button
             type="button"
@@ -373,66 +373,68 @@ function AppContent() {
           </div>
 
           {/* Seletor de Visão (Desktop) */}
-          <nav className="hidden md:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl">
+          <nav className="hidden md:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl min-w-0">
             <button
               onClick={() => setCurrentView('kanban')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 currentView === 'kanban'
                   ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <Kanban className="w-3.5 h-3.5" />
-              Pipeline (6 Etapas)
+              <Kanban className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Pipeline (6 Etapas)</span>
             </button>
             <button
               onClick={() => setCurrentView('tasks')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 currentView === 'tasks'
                   ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <CheckSquare className="w-3.5 h-3.5" />
-              Meu Dia & Ações
+              <CheckSquare className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Meu Dia</span>
             </button>
             <button
               onClick={() => setCurrentView('calendar')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 currentView === 'calendar'
                   ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <CalendarIcon className="w-3.5 h-3.5" />
-              Agenda da Equipe (Google)
+              <CalendarIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Agenda</span>
             </button>
             <button
               onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 currentView === 'dashboard'
                   ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              {isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}
+              <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}</span>
             </button>
           </nav>
         </div>
 
         {/* Direita: Perfil do Usuário, Busca, Filtro de Consultor, Tema e Botão Quick Capture */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-hidden">
           {/* Busca Rápida */}
-          <div className="relative hidden lg:block w-44">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar lead..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
-            />
+<div className="hidden md:block w-40 lg:w-44">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar lead..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
 
           {/* Indicador de Usuário */}
