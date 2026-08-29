@@ -9,6 +9,12 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.claude
+.agents
+.idea
+.vscode
+.claude
+.agents
 
 # testing
 /coverage
