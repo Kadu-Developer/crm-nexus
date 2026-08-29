@@ -55,7 +55,7 @@ export function CalendarRightSidebar({
   };
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md p-3.5 space-y-4 overflow-y-auto max-h-[calc(100vh-8.5rem)] select-none">
+    <aside className="hidden xl:flex w-72 shrink-0 flex-col border-l border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md p-3.5 space-y-4 overflow-y-auto max-h-[calc(100vh-8.5rem)] select-none">
       {/* Topo: Status e Botão + Add Task */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">

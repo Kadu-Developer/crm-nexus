@@ -54,7 +54,7 @@ export function CalendarLeftSidebar({
   const visibleAccountsCount = accounts.filter((a) => a.isVisible).length;
 
   return (
-    <aside className="w-68 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md p-3.5 space-y-4 overflow-y-auto h-full select-none">
+    <aside className="hidden lg:flex w-68 shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/80 backdrop-blur-md p-3.5 space-y-4 overflow-y-auto h-full select-none">
       {/* Mini Calendário */}
       <CalendarMiniPicker selectedDate={selectedDate} onSelectDate={onSelectDate} />
 

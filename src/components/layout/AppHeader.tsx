@@ -62,7 +62,7 @@ export default function AppHeader() {
           <div>
             <h1 className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1 sm:gap-1.5">
               NEXUS{' '}
-              <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">
+              <span className="hidden sm:inline-block text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">
                 CRM
               </span>
             </h1>
@@ -70,7 +70,7 @@ export default function AppHeader() {
         </div>
 
         {/* Seletor de Visão (Desktop) */}
-        <nav className="hidden md:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl">
+        <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl shrink-0">
           <button
             onClick={() => router.push('/')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${currentView === '' || currentView === 'kanban' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
@@ -103,7 +103,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        <div className="relative hidden lg:block w-44">
+        <div className="relative hidden md:block w-32 xl:w-44">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -114,7 +114,7 @@ export default function AppHeader() {
           />
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
+        <div className="hidden xl:flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
           {profile?.role === 'admin_ceo' ? (
             <ShieldCheck className="w-4 h-4 text-amber-500" />
           ) : (
@@ -127,7 +127,7 @@ export default function AppHeader() {
 
         <button
           onClick={handleRefresh}
-          className={`p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer ${loadingData ? 'animate-spin text-blue-500' : ''}`}
+          className={`hidden sm:flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer ${loadingData ? 'animate-spin text-blue-500' : ''}`}
           title="Recarregar dados"
         >
           <RefreshCw className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
@@ -146,7 +146,7 @@ export default function AppHeader() {
             await signOut();
             router.push('/login');
           }}
-          className="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 hover:text-rose-500 transition cursor-pointer"
+          className="hidden sm:flex items-center justify-center p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-500 hover:text-rose-500 transition cursor-pointer"
           title="Sair"
         >
           <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
