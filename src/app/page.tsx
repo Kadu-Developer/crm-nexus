@@ -373,7 +373,7 @@ function AppContent() {
           </div>
 
           {/* Seletor de Visão (Desktop) */}
-          <nav className="hidden md:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl min-w-0">
+          <nav className="hidden lg:flex items-center bg-slate-200/70 dark:bg-slate-950/80 border border-slate-300/60 dark:border-slate-800 p-1 rounded-xl min-w-0">
             <button
               onClick={() => setCurrentView('kanban')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
