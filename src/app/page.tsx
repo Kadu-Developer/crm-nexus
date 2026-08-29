@@ -328,6 +328,9 @@ function AppContent() {
           <button
             type="button"
             onClick={() => setCurrentView('suggestions')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer text-white/70 hover:bg-white/10 hover:text-white"
+            aria-label="Sugestões"
+            title="Sugestões"
           >
             <HelpCircle className="h-4 w-4" />
           </button>
@@ -343,7 +346,7 @@ function AppContent() {
       </aside>
 
       {/* Top Navbar Fixo */}
-      <header className="fixed top-0 left-0 right-0 h-16 w-full max-w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 md:pl-[5.5rem] flex items-center justify-between z-30 transition-colors">
+      <header className="fixed top-0 left-0 right-0 h-16 w-full max-w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-6 md:pl-[5.5rem] flex items-center justify-between z-30 transition-colors safe-area-inset-top">
         <div className="flex items-center gap-2 sm:gap-6 min-w-0">
           {/* Botão Menu Sanduíche (Mobile) */}
           <button
@@ -705,7 +708,7 @@ function AppContent() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 pt-20 pb-20 md:pb-6 md:pt-20 p-3 sm:p-4 md:p-6 max-w-[1720px] w-full mx-auto md:pl-[5.5rem] overflow-x-hidden min-h-0">
+      <main className="flex-1 pt-20 pb-20 md:pb-6 md:pt-20 p-3 sm:p-4 md:p-6 max-w-[1720px] w-full mx-auto md:pl-[5.5rem] overflow-x-hidden min-h-0 pb-[env(safe-area-inset-bottom)]">
         {currentView === 'kanban' && (
           <KanbanBoard
             opportunities={displayedOpportunities}
@@ -751,7 +754,7 @@ function AppContent() {
       </main>
 
       {/* Barra de Navegação Inferior Fixa (Mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 h-16 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-2 py-1 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 h-16 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-1 py-1 shadow-lg pb-[env(safe-area-inset-bottom)]">
         <button
           type="button"
           onClick={() => setCurrentView('kanban')}
@@ -801,6 +804,16 @@ function AppContent() {
         >
           <Building2 className="w-5 h-5 mb-0.5" />
           <span className="text-[10px]">Empresas</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setCurrentView('suggestions')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 rounded-lg transition-colors cursor-pointer ${
+            currentView === 'suggestions' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <HelpCircle className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">Sugestões</span>
         </button>
       </nav>
 

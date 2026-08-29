@@ -6,8 +6,6 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider } from "@/lib/supabase/auth-context";
 import { FloatingSuggestionWidget } from "@/components/suggestions/FloatingSuggestionWidget";
 import { FloatingLeadCopilotWidget } from "@/components/copilot/FloatingLeadCopilotWidget";
-import AppHeader from "@/components/layout/AppHeader";
-import AppSidebar from "@/components/layout/AppSidebar";
 
 const inter = Inter({
   variable: "--font-inter",
