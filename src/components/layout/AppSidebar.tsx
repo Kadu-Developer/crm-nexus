@@ -72,7 +72,7 @@ export default function AppSidebar({ currentView }: AppSidebarProps) {
         <div className="my-1 h-px w-7 bg-white/20" />
         <button
           type="button"
-          onClick={() => router.push('/suggestions')}
+          onClick={() => router.push('/')}
           className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors cursor-pointer ${currentView === 'suggestions' ? 'bg-[#24C9FF] text-[#052D72]' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           aria-label="Sugestões"
           title="Sugestões"

@@ -335,9 +335,9 @@ export function FloatingSuggestionWidget() {
                 <button
                   type="button"
                   onClick={() => {
-                    router.push('/suggestions');
-                    setIsOpen(false);
-                  }}
+                      router.push('/');
+                      setIsOpen(false);
+                    }}
                   title="Abrir tela cheia"
                   className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition cursor-pointer"
                 >
@@ -645,10 +645,10 @@ export function FloatingSuggestionWidget() {
             <button
               type="button"
               onClick={() => {
-                router.push('/suggestions');
-                setIsOpen(false);
-              }}
-              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                  router.push('/');
+                  setIsOpen(false);
+                }}
+                className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
             >
               <span>Ver painel completo</span>
               <ChevronRight className="w-3.5 h-3.5" />
