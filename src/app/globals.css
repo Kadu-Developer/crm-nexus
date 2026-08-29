@@ -40,3 +40,70 @@ body {
 		animation-duration: 0.01ms !important;
 	}
 }
+
+/* --- Anti-copy / anti-print / selection blocking --- */
+@media print {
+	*,
+	*::before,
+	*::after {
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* Hide interactive UI elements during print */
+	button,
+	input,
+	select,
+	textarea,
+	[role="dialog"],
+	.backdrop,
+	.fixed,
+	.absolute,
+	nav,
+	aside,
+	header,
+	footer,
+	script {
+		display: none !important;
+	}
+}
+
+/* Disable text selection globally */
+*,
+*::before,
+*::after {
+	-webkit-user-select: none !important;
+	-moz-user-select: none !important;
+	-ms-user-select: none !important;
+	user-select: none !important;
+	-webkit-touch-callout: none !important;
+}
+
+/* Allow selection inside inputs/textareas/editable */
+input,
+textarea,
+[contenteditable="true"],
+select {
+	-webkit-user-select: text !important;
+	-moz-user-select: text !important;
+	-ms-user-select: text !important;
+	user-select: text !important;
+	-webkit-touch-callout: auto !important;
+}
+
+/* Disable context menu on long press / right-click */
+html {
+	-webkit-touch-callout: none !important;
+}
+
+/* Block devtools toggle via touch */
+html {
+	touch-action: manipulation;
+}
+
+/* Prevent drag on images and links */
+img,
+a {
+	-webkit-user-drag: none !important;
+	user-select: none !important;
+}

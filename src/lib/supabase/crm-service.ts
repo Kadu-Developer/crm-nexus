@@ -639,4 +639,26 @@ export const crmService = {
       supabase.removeChannel(channel);
     };
   },
+
+  // 7. Excluir oportunidade (apenas para administradores)
+  async deleteOpportunity(oppId: string): Promise<{ success: boolean }> {
+    try {
+      if (isUUID(oppId)) {
+        const { error } = await supabase
+          .from('opportunities')
+          .delete()
+          .eq('id', oppId);
+
+        if (!error) return { success: true };
+      }
+    } catch (err) {
+      console.warn('Erro ao excluir oportunidade no Supabase:', err);
+    }
+
+    // Fallback local
+    const currentOpportunities = await getDemoOpportunities();
+    const updatedOpportunities = currentOpportunities.filter((o) => o.id !== oppId);
+    saveDemoOpportunities(updatedOpportunities);
+    return { success: true };
+  }
 };

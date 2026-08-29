@@ -15,6 +15,7 @@ interface EventModalProps {
   accounts: CollaboratorAccount[];
   categories: CalendarCategory[];
   opportunities?: Opportunity[];
+  isAdmin?: boolean;
 }
 
 export function EventModal({
@@ -26,8 +27,10 @@ export function EventModal({
   accounts,
   categories,
   opportunities = [],
+  isAdmin = false,
 }: EventModalProps) {
   const [title, setTitle] = useState('');
+  const [collaboratorName, setCollaboratorName] = useState('');
   const [description, setDescription] = useState('');
   const [collaboratorId, setCollaboratorId] = useState<string>(accounts[0]?.id || 'collab_carlos');
   const [additionalCollaboratorIds, setAdditionalCollaboratorIds] = useState<string[]>([]);
@@ -38,6 +41,18 @@ export function EventModal({
   const [meetUrl, setMeetUrl] = useState('');
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [linkedOpportunityId, setLinkedOpportunityId] = useState<string>('');
+
+  // Quando o consultor muda o colaborador responsável, atualiza o título automaticamente
+  const handleCollaboratorChange = (id: string) => {
+    setCollaboratorId(id);
+    if (!isAdmin) {
+      const acc = accounts.find((a) => a.id === id);
+      const name = acc?.name || '';
+      // Remove prefixo antigo do colaborador, se houver
+      const cleaned = title.replace(/^[^\s:]+:\s*/, '').trim();
+      setTitle(name ? `${name}: ${cleaned}` : cleaned);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -71,6 +86,12 @@ export function EventModal({
         setDescription('');
         setCollaboratorId(accounts[0]?.id || 'collab_carlos');
         setAdditionalCollaboratorIds([]);
+        if (!isAdmin) {
+          const acc = accounts[0];
+          const name = acc?.name || '';
+          setCollaboratorName(name);
+          setTitle(name ? `${name}: ` : '');
+        }
         setCategoryId('tech_alignment');
         setDateStr(new Date().toISOString().split('T')[0]);
         setStartTimeStr('09:00');
@@ -123,9 +144,16 @@ export function EventModal({
 
     const selectedOpp = opportunities.find((o) => o.id === linkedOpportunityId);
 
+    // Admin pode enviar o título livremente.
+    // Consultor: o prefixo "Nome: " é gerado pelo CalendarModule ao salvar.
+    let finalTitle = title.trim();
+    if (!isAdmin && collaboratorName) {
+      finalTitle = finalTitle.replace(new RegExp(`^${collaboratorName}:\\s*`), '').trim();
+    }
+
     const eventPayload: Partial<CalendarEvent> = {
       id: initialEvent?.id,
-      title: title.trim(),
+      title: finalTitle,
       description: description.trim(),
       collaboratorId,
       ctoId: collaboratorId,

@@ -23,6 +23,7 @@ import { EventDetailModal } from './EventDetailModal';
 import { GoogleSyncSettingsModal } from './GoogleSyncSettingsModal';
 import { AddCollaboratorModal } from './AddCollaboratorModal';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/supabase/auth-context';
 
 interface CalendarModuleProps {
   opportunities?: Opportunity[];
@@ -30,6 +31,8 @@ interface CalendarModuleProps {
 }
 
 export function CalendarModule({ opportunities = [], onSelectOpportunity }: CalendarModuleProps) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [showWeekends, setShowWeekends] = useState(true);
@@ -131,7 +134,19 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Salvar novo evento ou edição
   const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
-    const saved = await calendarService.saveEvent(eventData);
+    const selectedAccount = accounts.find((a) => a.id === eventData.collaboratorId);
+    const collaboratorName = selectedAccount?.name || '';
+
+    let finalTitle = (eventData.title || '').trim();
+
+    // Consultores veem o nome do responsável automaticamente no título.
+    // Admin pode editar o título livremente.
+    if (!isAdmin && collaboratorName && !finalTitle.startsWith(collaboratorName)) {
+      finalTitle = `${collaboratorName}: ${finalTitle}`;
+    }
+
+    const payload = { ...eventData, title: finalTitle };
+    const saved = await calendarService.saveEvent(payload);
     await loadData();
     toast.success(eventData.id ? 'Evento atualizado com sucesso!' : 'Novo evento agendado!', {
       description: `${saved.title} (${new Date(saved.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})`,

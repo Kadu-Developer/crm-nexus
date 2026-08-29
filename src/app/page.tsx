@@ -8,6 +8,7 @@ import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { QuickCaptureModal } from '@/components/quick-capture/QuickCaptureModal';
 import { LeadDetailModal } from '@/components/lead-modal/LeadDetailModal';
 import { CeoDashboard } from '@/components/dashboard/CeoDashboard';
+import { ConsultantDashboard } from '@/components/dashboard/ConsultantDashboard';
 import { TasksView } from '@/components/tasks-view/TasksView';
 import { ClientPortfolio } from '@/components/client-portfolio/ClientPortfolio';
 import { CalendarModule } from '@/components/calendar/CalendarModule';
@@ -249,6 +250,7 @@ function AppContent() {
   // Admins (admin_ceo e admin_tech) visualizam todas as oportunidades do pipeline.
   // Consultores visualizam suas oportunidades e dados do pipeline para clicar e gerenciar.
   const isAdmin = profile.role === 'admin_ceo' || profile.role === 'admin_tech';
+  const isConsultant = profile.role === 'consultant';
 
   const roleScopedOpportunities = isAdmin
     ? opportunities
@@ -414,7 +416,7 @@ function AppContent() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard CEO
+              {isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}
             </button>
           </nav>
         </div>
@@ -616,7 +618,7 @@ function AppContent() {
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
-                <span>Dashboard CEO</span>
+                <span>{isAdmin ? 'Dashboard CEO' : 'Meu Dashboard'}</span>
               </button>
 
               <button
@@ -732,7 +734,11 @@ function AppContent() {
         )}
 
         {currentView === 'dashboard' && (
-          <CeoDashboard opportunities={displayedOpportunities} />
+          isConsultant ? (
+            <ConsultantDashboard opportunities={displayedOpportunities} />
+          ) : (
+            <CeoDashboard opportunities={displayedOpportunities} />
+          )
         )}
 
         {currentView === 'clients' && (

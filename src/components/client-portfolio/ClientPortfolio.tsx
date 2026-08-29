@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Building2, Search, Users, TrendingUp, CalendarClock, ArrowUpRight } from 'lucide-react';
+import { Building2, Search, Users, TrendingUp, CalendarClock, ArrowUpRight, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Opportunity } from '@/types/crm';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { useAuth } from '@/lib/supabase/auth-context';
+import { crmService } from '@/lib/supabase/crm-service';
 
 interface ClientPortfolioProps {
   opportunities: Opportunity[];
@@ -11,8 +14,23 @@ interface ClientPortfolioProps {
 }
 
 export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPortfolioProps) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
+
+  const deleteLead = async (leadId: string) => {
+    if (!isAdmin) {
+      toast.error('Acesso negado: somente administradores podem excluir leads');
+      return;
+    }
+
+    if (window.confirm('Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.')) {
+      await crmService.deleteOpportunity(leadId);
+      toast.success('Lead excluído com sucesso');
+      // Note: The parent component should refetch opportunities after deletion
+    }
+  };
 
   const clients = useMemo(() => {
     const grouped = new Map<string, Opportunity[]>();
@@ -96,7 +114,21 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPo
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#052D72] text-white group-hover:bg-[#0757C9] transition-colors"><Building2 className="h-4 w-4" /></div>
                   <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900 group-hover:text-[#0757C9] dark:text-white dark:group-hover:text-[#24C9FF] transition-colors">{client.name}</h3><p className="truncate text-xs text-slate-500 dark:text-slate-400">{client.legalName}</p><p className="mt-1 text-[11px] capitalize text-slate-500">{client.segment.replace(/_/g, ' ')} · {client.city}/{client.state}</p></div>
                 </div>
-                <span className="shrink-0 border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">{client.opportunities.length} {client.opportunities.length === 1 ? 'oportunidade' : 'oportunidades'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">{client.opportunities.length} {client.opportunities.length === 1 ? 'oportunidade' : 'oportunidades'}</span>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteLead(client.id);
+                      }}
+                      className="p-1 rounded-lg text-rose-500 hover:text-rose-600 dark:hover:text-rose-400"
+                      title="Excluir lead"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-xs dark:border-slate-800"><div><p className="text-slate-500">Pipeline</p><strong className="mt-1 block text-slate-900 dark:text-white">{formatCurrency(client.totalValue)}</strong></div><div><p className="text-slate-500">Forecast</p><strong className="mt-1 block text-emerald-600 dark:text-emerald-400">{formatCurrency(client.weightedValue)}</strong></div></div>
               <div className="mt-4 flex items-center justify-between gap-3 text-xs"><div className="flex min-w-0 items-center gap-2"><Users className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate text-slate-600 dark:text-slate-300">{client.contact?.name || 'Contato não informado'}</span></div><span className="shrink-0 text-slate-500">{client.consultantName.split(' ')[0]}</span></div>
