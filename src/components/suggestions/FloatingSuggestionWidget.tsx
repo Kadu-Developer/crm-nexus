@@ -274,7 +274,7 @@ export function FloatingSuggestionWidget() {
   return (
     <>
       {/* Botão Flutuante (Estilo Chatbot FAB) */}
-      <aside aria-label="Widget de Sugestões" className="group fixed bottom-6 right-6 z-50 flex items-center justify-end">
+      <aside aria-label="Widget de Sugestões" className="group fixed bottom-16 lg:bottom-6 right-6 z-50 flex items-center justify-end">
         {/* Tooltip revelado somente no hover */}
         {!isOpen && (
           <div
