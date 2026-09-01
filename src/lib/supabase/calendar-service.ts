@@ -193,9 +193,15 @@ class CalendarService {
       // Ignora erro
     }
 
+    // Se o Supabase vier vazio, busca no localStorage e, se ainda não houver eventos do Google,
+    // sincroniza com a API real (evita ficar preso apenas aos eventos locais/CRM)
     if (events.length === 0) {
       events = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
-      if (events.length === 0 && typeof window !== 'undefined') {
+    }
+
+    if (typeof window !== 'undefined') {
+      const hasGoogleEvents = events.some((e) => e.source === 'google_calendar');
+      if (!hasGoogleEvents) {
         try {
           const syncRes = await fetch('/api/calendar/sync', {
             method: 'POST',
@@ -205,8 +211,14 @@ class CalendarService {
           if (syncRes.ok) {
             const syncData = await syncRes.json();
             if (syncData.events && syncData.events.length > 0) {
-              events = syncData.events;
-              this.setStorageItem(STORAGE_KEYS.EVENTS, events);
+              const merged = [...events];
+              for (const ge of syncData.events as CalendarEvent[]) {
+                if (!merged.some((e) => e.id === ge.id)) {
+                  merged.push(ge);
+                }
+              }
+              events = merged;
+              this.setStorageItem(STORAGE_KEYS.EVENTS, merged);
             }
           }
         } catch {

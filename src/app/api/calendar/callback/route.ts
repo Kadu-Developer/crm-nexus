@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
     const { access_token, refresh_token, expires_in } = tokenData;
+    const tokenExpiry = new Date(Date.now() + (expires_in || 3600) * 1000).toISOString();
 
     // 2. Obter informações de perfil do Google
     const userinfoResponse = await fetch(GOOGLE_USERINFO_ENDPOINT, {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     const userName = googleProfile.name || 'Carlos Eduardo';
 
     // 3. Salvar / Atualizar colaborador com Google conectado (DEVE ser antes dos eventos devido à FK)
-    await supabaseAdmin.from('calendar_collaborators').upsert({
+    const { error: collaboratorError } = await supabaseAdmin.from('calendar_collaborators').upsert({
       id: 'collab_carlos',
       name: userName,
       email: userEmail,
@@ -73,8 +74,15 @@ export async function GET(request: NextRequest) {
       google_connected: true,
       sync_status: 'synced',
       last_sync_at: new Date().toISOString(),
+      google_access_token: access_token,
+      google_refresh_token: refresh_token || null,
+      google_token_expiry: tokenExpiry,
       is_visible: true,
     });
+
+    if (collaboratorError) {
+      console.error('Erro ao salvar colaborador no Supabase:', collaboratorError.message);
+    }
 
     // 4. Buscar eventos reais do Google Calendar imediatamente
     let syncedEventsCount = 0;
@@ -112,7 +120,7 @@ export async function GET(request: NextRequest) {
             if (videoEntry) meetUrl = videoEntry.uri;
           }
 
-          await supabaseAdmin.from('calendar_events').upsert({
+          const { error: eventError } = await supabaseAdmin.from('calendar_events').upsert({
             id: `google_${item.id}`,
             google_event_id: item.id,
             title: item.summary || '(Sem título)',
@@ -128,6 +136,10 @@ export async function GET(request: NextRequest) {
             status: item.status === 'cancelled' ? 'cancelled' : 'confirmed',
             updated_at: new Date().toISOString(),
           });
+
+          if (eventError) {
+            console.error(`Erro ao salvar evento ${item.id} no Supabase:`, eventError.message);
+          }
         }
       }
     } catch (fetchErr) {
@@ -145,8 +157,24 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(redirectUrl.toString());
 
-    // Configurar cookie com o token de acesso
+    // Configurar cookies de autenticação do Google
     response.cookies.set('google_access_token', access_token, {
+      path: '/',
+      maxAge: expires_in || 3600,
+      sameSite: 'lax',
+    });
+
+    // Persistir o refresh token em cookie (longa duração) para renovar o access token automaticamente
+    if (refresh_token) {
+      response.cookies.set('google_refresh_token', refresh_token, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30, // 30 dias
+        sameSite: 'lax',
+        httpOnly: true,
+      });
+    }
+
+    response.cookies.set('google_token_expiry', tokenExpiry, {
       path: '/',
       maxAge: expires_in || 3600,
       sameSite: 'lax',
