@@ -60,7 +60,23 @@ export async function GET(request: NextRequest) {
     const userEmail = (googleProfile.email || 'carlos@nexusflowtech.com.br').toLowerCase().trim();
     const userName = googleProfile.name || 'Carlos Eduardo';
 
-    // 3. Buscar eventos reais do Google Calendar imediatamente
+    // 3. Salvar / Atualizar colaborador com Google conectado (DEVE ser antes dos eventos devido à FK)
+    await supabaseAdmin.from('calendar_collaborators').upsert({
+      id: 'collab_carlos',
+      name: userName,
+      email: userEmail,
+      role_title: 'Diretor / CTO',
+      department: 'executivo',
+      avatar: 'CE',
+      color: '#0284c7',
+      google_calendar_id: userEmail,
+      google_connected: true,
+      sync_status: 'synced',
+      last_sync_at: new Date().toISOString(),
+      is_visible: true,
+    });
+
+    // 4. Buscar eventos reais do Google Calendar imediatamente
     let syncedEventsCount = 0;
     try {
       const minTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -117,22 +133,6 @@ export async function GET(request: NextRequest) {
     } catch (fetchErr) {
       console.warn('Erro ao buscar eventos durante o callback:', fetchErr);
     }
-
-    // 4. Salvar / Atualizar colaborador com Google conectado
-    await supabaseAdmin.from('calendar_collaborators').upsert({
-      id: 'collab_carlos',
-      name: userName,
-      email: userEmail,
-      role_title: 'Diretor / CTO',
-      department: 'executivo',
-      avatar: 'CE',
-      color: '#0284c7',
-      google_calendar_id: userEmail,
-      google_connected: true,
-      sync_status: 'synced',
-      last_sync_at: new Date().toISOString(),
-      is_visible: true,
-    });
 
     // 5. Redirecionar para o CRM com cookies e status de sucesso
     const state = stateStr ? JSON.parse(stateStr) : {};

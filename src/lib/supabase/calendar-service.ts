@@ -62,6 +62,26 @@ class CalendarService {
 
     if (list.length === 0) {
       list = this.getStorageItem<CollaboratorAccount[]>(STORAGE_KEYS.COLLABORATORS, DEFAULT_COLLABORATORS);
+      try {
+        await supabase.from('calendar_collaborators').upsert(
+          list.map((c) => ({
+            id: c.id,
+            name: c.name,
+            role_title: c.roleTitle,
+            department: c.department,
+            email: c.email,
+            avatar: c.avatar,
+            color: c.color,
+            google_calendar_id: c.googleCalendarId,
+            google_connected: c.googleConnected,
+            sync_status: c.syncStatus,
+            last_sync_at: c.lastSyncAt,
+            is_visible: c.isVisible,
+          }))
+        );
+      } catch {
+        // Ignora erro se tabelas ainda não estiverem migradas remotamente
+      }
     }
 
     // Desduplica por e-mail ou prefixo de nome
@@ -401,6 +421,15 @@ class CalendarService {
   public async syncWithGoogle(): Promise<{ success: boolean; syncedCount: number; timestamp: string }> {
     const now = new Date().toISOString();
 
+    const collaborators = await this.getCollaborators();
+    const updated = collaborators.map((acc) => ({
+      ...acc,
+      googleConnected: true,
+      syncStatus: 'synced' as const,
+      lastSyncAt: now,
+    }));
+    await this.saveCollaborators(updated);
+
     try {
       const syncRes = await fetch('/api/calendar/sync', {
         method: 'POST',
@@ -424,15 +453,6 @@ class CalendarService {
     } catch (e) {
       console.warn('Sync API request failed:', e);
     }
-
-    const collaborators = await this.getCollaborators();
-    const updated = collaborators.map((acc) => ({
-      ...acc,
-      googleConnected: true,
-      syncStatus: 'synced' as const,
-      lastSyncAt: now,
-    }));
-    await this.saveCollaborators(updated);
 
     const settings = await this.getGoogleSettings();
     await this.saveGoogleSettings({
