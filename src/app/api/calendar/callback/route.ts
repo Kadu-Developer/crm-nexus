@@ -84,76 +84,15 @@ export async function GET(request: NextRequest) {
       console.error('Erro ao salvar colaborador no Supabase:', collaboratorError.message);
     }
 
-    // 4. Buscar eventos reais do Google Calendar imediatamente
-    let syncedEventsCount = 0;
-    try {
-      const minTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const maxTime = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
-
-      const calUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-      calUrl.searchParams.set('timeMin', minTime);
-      calUrl.searchParams.set('timeMax', maxTime);
-      calUrl.searchParams.set('singleEvents', 'true');
-      calUrl.searchParams.set('orderBy', 'startTime');
-      calUrl.searchParams.set('maxResults', '250');
-
-      const calRes = await fetch(calUrl.toString(), {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          Accept: 'application/json',
-        },
-      });
-
-      if (calRes.ok) {
-        const calData = await calRes.json();
-        const items = calData.items || [];
-        syncedEventsCount = items.length;
-
-        // Salvar eventos na tabela calendar_events do Supabase
-        for (const item of items) {
-          const startTime = item.start?.dateTime || item.start?.date || new Date().toISOString();
-          const endTime = item.end?.dateTime || item.end?.date || new Date(new Date(startTime).getTime() + 3600000).toISOString();
-
-          let meetUrl = item.hangoutLink;
-          if (!meetUrl && item.conferenceData?.entryPoints) {
-            const videoEntry = item.conferenceData.entryPoints.find((ep: any) => ep.entryPointType === 'video');
-            if (videoEntry) meetUrl = videoEntry.uri;
-          }
-
-          const { error: eventError } = await supabaseAdmin.from('calendar_events').upsert({
-            id: `google_${item.id}`,
-            google_event_id: item.id,
-            title: item.summary || '(Sem título)',
-            description: item.description || '',
-            location: item.location || '',
-            start_time: startTime,
-            end_time: endTime,
-            is_all_day: !item.start?.dateTime && !!item.start?.date,
-            meet_url: meetUrl || null,
-            collaborator_id: 'collab_carlos',
-            category_id: 'tech_alignment',
-            source: 'google_calendar',
-            status: item.status === 'cancelled' ? 'cancelled' : 'confirmed',
-            updated_at: new Date().toISOString(),
-          });
-
-          if (eventError) {
-            console.error(`Erro ao salvar evento ${item.id} no Supabase:`, eventError.message);
-          }
-        }
-      }
-    } catch (fetchErr) {
-      console.warn('Erro ao buscar eventos durante o callback:', fetchErr);
-    }
-
-    // 5. Redirecionar para o CRM com cookies e status de sucesso
+    // 5. Redirecionar imediatamente para o CRM. A sincronização dos eventos é feita
+    //    pelo front-end chamando /api/calendar/sync, evitando segurar a resposta e
+    //    estourar o timeout das funções serverless da Vercel.
     const state = stateStr ? JSON.parse(stateStr) : {};
     const redirectPath = state.redirectPath || '/';
 
     const redirectUrl = new URL(redirectPath, origin);
     redirectUrl.searchParams.set('google_connected', 'true');
     redirectUrl.searchParams.set('email', userEmail);
-    redirectUrl.searchParams.set('synced_count', String(syncedEventsCount));
 
     const response = NextResponse.redirect(redirectUrl.toString());
 

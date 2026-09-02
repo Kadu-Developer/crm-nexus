@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const response = NextResponse.json({
+      const syncRes = NextResponse.json({
         success: true,
         events: mappedEvents,
         syncedCount: mappedEvents.length,
@@ -134,22 +134,22 @@ export async function POST(request: NextRequest) {
 
       // Reaplica os cookies renovados para as próximas requisições
       if (renewedAccessToken && renewedExpiry) {
-        response.cookies.set('google_access_token', renewedAccessToken, {
+        syncRes.cookies.set('google_access_token', renewedAccessToken, {
           path: '/',
           maxAge: 3600,
           sameSite: 'lax',
         });
-        response.cookies.set('google_token_expiry', renewedExpiry, {
+        syncRes.cookies.set('google_token_expiry', renewedExpiry, {
           path: '/',
           maxAge: 3600,
           sameSite: 'lax',
         });
       }
 
-      return response;
+      return syncRes;
     }
 
-    const emptyResponse = NextResponse.json({
+    const emptySyncRes = NextResponse.json({
       success: true,
       events: [],
       syncedCount: 0,
@@ -157,19 +157,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (renewedAccessToken && renewedExpiry) {
-      emptyResponse.cookies.set('google_access_token', renewedAccessToken, {
+      emptySyncRes.cookies.set('google_access_token', renewedAccessToken, {
         path: '/',
         maxAge: 3600,
         sameSite: 'lax',
       });
-      emptyResponse.cookies.set('google_token_expiry', renewedExpiry, {
+      emptySyncRes.cookies.set('google_token_expiry', renewedExpiry, {
         path: '/',
         maxAge: 3600,
         sameSite: 'lax',
       });
     }
 
-    return emptyResponse;
+    return emptySyncRes;
   } catch (error: any) {
     console.error('Erro na rota de sincronização do Google Calendar:', error);
     return NextResponse.json({
