@@ -30,34 +30,64 @@ class CalendarService {
     }
   }
 
-  // 1. Obter Colaboradores Reais (Supabase ➔ Local)
+  // 1. Obter Colaboradores Reais (API server → Supabase ➔ Local)
   public async getCollaborators(): Promise<CollaboratorAccount[]> {
     let list: CollaboratorAccount[] = [];
 
+    // Tenta primeiro via API route server (supabaseAdmin, ignora RLS)
     try {
-      const { data, error } = await supabase
-        .from('calendar_collaborators')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        list = data.map((d: any) => ({
-          id: d.id,
-          name: d.name,
-          roleTitle: d.role_title,
-          department: d.department,
-          email: d.email,
-          avatar: d.avatar,
-          color: d.color,
-          googleCalendarId: d.google_calendar_id,
-          googleConnected: d.google_connected,
-          syncStatus: d.sync_status,
-          lastSyncAt: d.last_sync_at,
-          isVisible: d.is_visible,
-        }));
+      const res = await fetch('/api/calendar/data?include=collaborators', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const rows = data.collaborators || [];
+        if (rows.length > 0) {
+          list = rows.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            roleTitle: d.role_title,
+            department: d.department,
+            email: d.email,
+            avatar: d.avatar,
+            color: d.color,
+            googleCalendarId: d.google_calendar_id,
+            googleConnected: d.google_connected,
+            syncStatus: d.sync_status,
+            lastSyncAt: d.last_sync_at,
+            isVisible: d.is_visible,
+          }));
+        }
       }
     } catch {
       // Ignora e usa fallback
+    }
+
+    // Fallback: leitura direta via supabase client
+    if (list.length === 0) {
+      try {
+        const { data, error } = await supabase
+          .from('calendar_collaborators')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          list = data.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            roleTitle: d.role_title,
+            department: d.department,
+            email: d.email,
+            avatar: d.avatar,
+            color: d.color,
+            googleCalendarId: d.google_calendar_id,
+            googleConnected: d.google_connected,
+            syncStatus: d.sync_status,
+            lastSyncAt: d.last_sync_at,
+            isVisible: d.is_visible,
+          }));
+        }
+      } catch {
+        // Ignora e usa fallback
+      }
     }
 
     if (list.length === 0) {
@@ -155,45 +185,85 @@ class CalendarService {
   public async getEvents(crmOpportunities?: Opportunity[]): Promise<CalendarEvent[]> {
     let events: CalendarEvent[] = [];
 
-    // 1. Busca do Supabase
+    // 1. Tenta primeiro via API route server (supabaseAdmin, ignora RLS)
     try {
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .order('start_time', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        events = data.map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          description: d.description,
-          collaboratorId: d.collaborator_id,
-          ctoId: d.collaborator_id,
-          additionalCollaboratorIds: d.additional_collaborator_ids || [],
-          categoryId: d.category_id,
-          startTime: d.start_time,
-          endTime: d.end_time,
-          isAllDay: d.is_all_day,
-          meetUrl: d.meet_url,
-          location: d.location,
-          attendees: d.attendees || [],
-          linkedOpportunityId: d.linked_opportunity_id,
-          opportunityTitle: d.opportunity_title,
-          opportunityCompanyName: d.opportunity_company_name,
-          opportunityScore: d.opportunity_score,
-          stageTitle: d.stage_title,
-          recurrence: d.recurrence || 'none',
-          source: d.source,
-          status: d.status,
-          createdAt: d.created_at,
-          updatedAt: d.updated_at,
-        }));
+      const res = await fetch('/api/calendar/data?include=events', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const rows = data.events || [];
+        if (rows.length > 0) {
+          events = rows.map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            description: d.description,
+            collaboratorId: d.collaborator_id,
+            ctoId: d.collaborator_id,
+            additionalCollaboratorIds: d.additional_collaborator_ids || [],
+            categoryId: d.category_id,
+            startTime: d.start_time,
+            endTime: d.end_time,
+            isAllDay: d.is_all_day,
+            meetUrl: d.meet_url,
+            location: d.location,
+            attendees: d.attendees || [],
+            linkedOpportunityId: d.linked_opportunity_id,
+            opportunityTitle: d.opportunity_title,
+            opportunityCompanyName: d.opportunity_company_name,
+            opportunityScore: d.opportunity_score,
+            stageTitle: d.stage_title,
+            recurrence: d.recurrence || 'none',
+            source: d.source,
+            status: d.status,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+          }));
+        }
       }
     } catch {
       // Ignora erro
     }
 
-    // 2. Sempre sincroniza com Google Calendar (se disponível)
+    // 2. Fallback: leitura direta via supabase client (se a API route falhar/vazia)
+    if (events.length === 0) {
+      try {
+        const { data, error } = await supabase
+          .from('calendar_events')
+          .select('*')
+          .order('start_time', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          events = data.map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            description: d.description,
+            collaboratorId: d.collaborator_id,
+            ctoId: d.collaborator_id,
+            additionalCollaboratorIds: d.additional_collaborator_ids || [],
+            categoryId: d.category_id,
+            startTime: d.start_time,
+            endTime: d.end_time,
+            isAllDay: d.is_all_day,
+            meetUrl: d.meet_url,
+            location: d.location,
+            attendees: d.attendees || [],
+            linkedOpportunityId: d.linked_opportunity_id,
+            opportunityTitle: d.opportunity_title,
+            opportunityCompanyName: d.opportunity_company_name,
+            opportunityScore: d.opportunity_score,
+            stageTitle: d.stage_title,
+            recurrence: d.recurrence || 'none',
+            source: d.source,
+            status: d.status,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+          }));
+        }
+      } catch {
+        // Ignora erro
+      }
+    }
+
+    // 3. Sempre sincroniza com Google Calendar (se disponível)
     if (typeof window !== 'undefined') {
       try {
         const syncRes = await fetch('/api/calendar/sync', {
@@ -216,8 +286,6 @@ class CalendarService {
         // Fallback silencioso
       }
     }
-
-    // 3. Fallback: localStorage (apenas se Supabase E Google falharam)
     if (events.length === 0) {
       events = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
     }
