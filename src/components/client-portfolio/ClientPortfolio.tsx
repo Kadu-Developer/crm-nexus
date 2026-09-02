@@ -25,10 +25,29 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPo
       return;
     }
 
-    if (window.confirm('Tem certeza que deseja excluir este lead? Esta ação não pode ser desfeita.')) {
-      await crmService.deleteOpportunity(leadId);
-      toast.success('Lead excluído com sucesso');
-      // Note: The parent component should refetch opportunities after deletion
+    if (window.confirm('Tem certeza que deseja excluir este lead e todas as suas oportunidades? Esta ação não pode ser desfeita.')) {
+      try {
+        // client.id pode ser CNPJ ou companyName - precisamos deletar todas as oportunidades do cliente
+        const clientOpps = opportunities.filter(
+          (o) => (o.cnpj || o.companyName.toLowerCase()) === leadId
+        );
+        
+        if (clientOpps.length === 0) {
+          toast.error('Nenhuma oportunidade encontrada para este lead');
+          return;
+        }
+
+        // Deletar todas as oportunidades do cliente
+        for (const opp of clientOpps) {
+          await crmService.deleteOpportunity(opp.id);
+        }
+        
+        toast.success(`Lead excluído (${clientOpps.length} oportunidade(s) removida(s))`);
+        window.location.reload();
+      } catch (err) {
+        toast.error('Erro ao excluir lead');
+        console.error(err);
+      }
     }
   };
 

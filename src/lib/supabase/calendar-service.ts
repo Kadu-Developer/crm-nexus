@@ -151,11 +151,11 @@ class CalendarService {
     return newCollaborator;
   }
 
-  // 4. Obter Eventos Reais (Sem Mocks)
+  // 4. Obter Eventos — PRIORIZA EVENTOS DO GOOGLE E CRM
   public async getEvents(crmOpportunities?: Opportunity[]): Promise<CalendarEvent[]> {
     let events: CalendarEvent[] = [];
 
-    // Busca do Supabase
+    // 1. Busca do Supabase
     try {
       const { data, error } = await supabase
         .from('calendar_events')
@@ -193,41 +193,41 @@ class CalendarService {
       // Ignora erro
     }
 
-    // Se o Supabase vier vazio, busca no localStorage e, se ainda não houver eventos do Google,
-    // sincroniza com a API real (evita ficar preso apenas aos eventos locais/CRM)
+    // 2. Sempre sincroniza com Google Calendar (se disponível)
+    if (typeof window !== 'undefined') {
+      try {
+        const syncRes = await fetch('/api/calendar/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          if (syncData.events && syncData.events.length > 0) {
+            // Merge: adiciona eventos do Google que ainda não existem
+            for (const ge of syncData.events as CalendarEvent[]) {
+              if (!events.some((e) => e.id === ge.id)) {
+                events.push(ge);
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+
+    // 3. Fallback: localStorage (apenas se Supabase E Google falharam)
     if (events.length === 0) {
       events = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
     }
 
-    if (typeof window !== 'undefined') {
-      const hasGoogleEvents = events.some((e) => e.source === 'google_calendar');
-      if (!hasGoogleEvents) {
-        try {
-          const syncRes = await fetch('/api/calendar/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-          });
-          if (syncRes.ok) {
-            const syncData = await syncRes.json();
-            if (syncData.events && syncData.events.length > 0) {
-              const merged = [...events];
-              for (const ge of syncData.events as CalendarEvent[]) {
-                if (!merged.some((e) => e.id === ge.id)) {
-                  merged.push(ge);
-                }
-              }
-              events = merged;
-              this.setStorageItem(STORAGE_KEYS.EVENTS, merged);
-            }
-          }
-        } catch {
-          // Fallback silencioso
-        }
-      }
+    // 4. Salva eventos no localStorage para cache
+    if (events.length > 0) {
+      this.setStorageItem(STORAGE_KEYS.EVENTS, events);
     }
 
-    // Sincroniza apenas reuniões reais do CRM que tenham data agendada
+    // 5. Sincroniza reuniões do CRM (opportunities com nextActionDate)
     if (crmOpportunities && crmOpportunities.length > 0) {
       const crmEvents: CalendarEvent[] = [];
       
