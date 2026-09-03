@@ -17,7 +17,7 @@ interface EventModalProps {
   categories: CalendarCategory[];
   opportunities?: Opportunity[];
   isAdmin?: boolean;
-  currentCollaboratorId?: string;
+  currentCollaboratorId?: string | null;
 }
 
 export function EventModal({

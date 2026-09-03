@@ -18,7 +18,7 @@ interface GoogleSyncSettingsModalProps {
   onClearEvents?: () => void;
   onConnectAccount?: (collaboratorId: string, email: string) => void;
   onDisconnectAccount?: (collaboratorId: string) => void;
-  currentCollaboratorId?: string;
+  currentCollaboratorId?: string | null;
 }
 
 export function GoogleSyncSettingsModal({
@@ -173,7 +173,7 @@ export function GoogleSyncSettingsModal({
 
                   <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5 min-h-[26px]">
                     {(() => {
-                      const isOwner = currentCollaboratorId ? acc.id === currentCollaboratorId : true;
+                      const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
                       if (!isOwner) {
                         return (
                           <span className="text-[10px] text-slate-400 font-medium">

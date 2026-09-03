@@ -23,7 +23,7 @@ interface CalendarLeftSidebarProps {
   onOpenClearModal?: () => void;
   onConnectAccount?: (collaboratorId: string, email: string) => void;
   onDisconnectAccount?: (collaboratorId: string) => void;
-  currentCollaboratorId?: string;
+  currentCollaboratorId?: string | null;
 }
 
 export function CalendarLeftSidebar({
@@ -202,7 +202,7 @@ export function CalendarLeftSidebar({
 
               {/* Status / Ação Individual de Conexão Google */}
               {(() => {
-                const isOwner = currentCollaboratorId ? acc.id === currentCollaboratorId : true;
+                const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
 
                 return (
                   <div className="shrink-0 ml-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -230,7 +230,7 @@ export function CalendarLeftSidebar({
                       <button
                         type="button"
                         onClick={() => onConnectAccount(acc.id, acc.email)}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition cursor-pointer active:scale-95 shadow-xs"
                         title={`Conectar sua Google Agenda (${acc.name})`}
                       >
                         <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24">
@@ -241,11 +241,7 @@ export function CalendarLeftSidebar({
                         </svg>
                         <span>Conectar</span>
                       </button>
-                    ) : (
-                      <span className="text-[9px] text-slate-400 font-medium px-1">
-                        Desconectado
-                      </span>
-                    )}
+                    ) : null}
                   </div>
                 );
               })()}

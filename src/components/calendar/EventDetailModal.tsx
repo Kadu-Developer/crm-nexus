@@ -13,7 +13,7 @@ interface EventDetailModalProps {
   onOpenOpportunity?: (opportunityId: string) => void;
   accounts: CollaboratorAccount[];
   categories: CalendarCategory[];
-  currentCollaboratorId?: string;
+  currentCollaboratorId?: string | null;
 }
 
 export function EventDetailModal({

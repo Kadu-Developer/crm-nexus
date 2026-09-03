@@ -38,6 +38,15 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
 
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [accounts, setAccounts] = useState<CollaboratorAccount[]>(DEFAULT_COLLABORATORS);
+  const [categories, setCategories] = useState<CalendarCategory[]>(DEFAULT_CATEGORIES);
+  const [googleSettings, setGoogleSettings] = useState<GoogleIntegrationSettings | null>(null);
+
   // Identifica a conta de colaborador do usuário logado
   const currentCollaboratorId = useMemo(() => {
     const email = (
@@ -48,21 +57,19 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     ).toLowerCase().trim();
     const name = (profile?.name || user?.name || '').toLowerCase().trim();
 
+    if (!email && !name) return null;
+
     if (email.includes('marcel') || name.includes('marcel')) return 'collab_marcel';
     if (email.includes('patrik') || email.includes('patrick') || name.includes('patrik')) return 'collab_patrik';
     if (email.includes('carlos') || email.includes('kadu') || name.includes('carlos') || name.includes('kadu')) return 'collab_carlos';
 
-    return 'collab_carlos';
-  }, [profile, user]);
-
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [accounts, setAccounts] = useState<CollaboratorAccount[]>(DEFAULT_COLLABORATORS);
-  const [categories, setCategories] = useState<CalendarCategory[]>(DEFAULT_CATEGORIES);
-  const [googleSettings, setGoogleSettings] = useState<GoogleIntegrationSettings | null>(null);
+    const match = accounts.find(
+      (a) =>
+        (a.email && email && a.email.toLowerCase().trim() === email) ||
+        (a.name && name && a.name.toLowerCase().trim() === name)
+    );
+    return match ? match.id : null;
+  }, [profile, user, accounts]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -283,7 +290,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     setEditingEvent({
       startTime: selectedDate.toISOString(),
       endTime: new Date(selectedDate.getTime() + 3600000).toISOString(),
-      collaboratorId: currentCollaboratorId,
+      collaboratorId: currentCollaboratorId || undefined,
     });
     setIsEventModalOpen(true);
   };
@@ -296,7 +303,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     setEditingEvent({
       startTime: start.toISOString(),
       endTime: end.toISOString(),
-      collaboratorId: currentCollaboratorId,
+      collaboratorId: currentCollaboratorId || undefined,
     });
     setIsEventModalOpen(true);
   };
@@ -313,7 +320,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       title: 'Reunião de Alinhamento / Pré-Diagnóstico',
       startTime: start.toISOString(),
       endTime: end.toISOString(),
-      collaboratorId: currentCollaboratorId,
+      collaboratorId: currentCollaboratorId || undefined,
       additionalCollaboratorIds: slot.availableCollaborators.filter((id) => id !== currentCollaboratorId),
       categoryId: 'crm_diagnostico',
     });
