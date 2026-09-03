@@ -11,6 +11,7 @@ import {
 } from '@/types/calendar';
 import { Opportunity } from '@/types/crm';
 import { calendarService } from '@/lib/supabase/calendar-service';
+import { DEFAULT_COLLABORATORS, DEFAULT_CATEGORIES } from '@/lib/calendar-mock-data';
 import { CalendarLeftSidebar } from './CalendarLeftSidebar';
 import { CalendarHeader } from './CalendarHeader';
 import { CalendarWeekGrid } from './CalendarWeekGrid';
@@ -39,8 +40,8 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const [searchQuery, setSearchQuery] = useState('');
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [accounts, setAccounts] = useState<CollaboratorAccount[]>([]);
-  const [categories, setCategories] = useState<CalendarCategory[]>([]);
+  const [accounts, setAccounts] = useState<CollaboratorAccount[]>(DEFAULT_COLLABORATORS);
+  const [categories, setCategories] = useState<CalendarCategory[]>(DEFAULT_CATEGORIES);
   const [googleSettings, setGoogleSettings] = useState<GoogleIntegrationSettings | null>(null);
 
   const [isSyncing, setIsSyncing] = useState(false);
@@ -54,17 +55,21 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Carregar dados
   const loadData = useCallback(async () => {
-    const [evts, accs, cats, settings] = await Promise.all([
-      calendarService.getEvents(opportunities),
-      calendarService.getCollaborators(),
-      calendarService.getCategories(),
-      calendarService.getGoogleSettings(),
-    ]);
+    try {
+      const [evts, accs, cats, settings] = await Promise.all([
+        calendarService.getEvents(opportunities),
+        calendarService.getCollaborators(),
+        calendarService.getCategories(),
+        calendarService.getGoogleSettings(),
+      ]);
 
-    setEvents(evts);
-    setAccounts(accs);
-    setCategories(cats);
-    setGoogleSettings(settings);
+      setEvents(evts);
+      setAccounts(accs);
+      setCategories(cats);
+      setGoogleSettings(settings);
+    } catch {
+      // Ignora erro
+    }
   }, [opportunities]);
 
   useEffect(() => {
@@ -117,7 +122,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   };
 
   // Sincronizar com Google Agenda
-  const handleSyncGoogle = async () => {
+  const handleSyncGoogle = useCallback(async () => {
     setIsSyncing(true);
     try {
       const result = await calendarService.syncWithGoogle();
@@ -125,12 +130,27 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       toast.success('Google Workspace sincronizado!', {
         description: `${result.syncedCount} eventos sincronizados para toda a equipe.`,
       });
-    } catch (e) {
+    } catch {
       toast.error('Erro ao sincronizar com Google Workspace');
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [loadData]);
+
+  // Escuta confirmação do popup de login Google (para não sair da tela)
+  useEffect(() => {
+    const handleAuthMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+        toast.success('Conta Google conectada com sucesso!', {
+          description: 'Sincronizando eventos da sua Google Agenda...',
+        });
+        await handleSyncGoogle();
+      }
+    };
+
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, [handleSyncGoogle]);
 
   // Salvar novo evento ou edição
   const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
@@ -244,14 +264,28 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Filtragem de eventos
   const filteredEvents = useMemo(() => {
-    const visibleAccountIds = new Set(accounts.filter((a) => a.isVisible).map((a) => a.id));
-    const visibleCategoryIds = new Set(categories.filter((c) => c.isVisible).map((c) => c.id));
+    const hasAnyAccountVisible = accounts.some((a) => a.isVisible);
+    const visibleAccountIds = new Set(
+      hasAnyAccountVisible
+        ? accounts.filter((a) => a.isVisible).map((a) => a.id)
+        : accounts.map((a) => a.id)
+    );
+
+    const hasAnyCategoryVisible = categories.some((c) => c.isVisible);
+    const visibleCategoryIds = new Set(
+      hasAnyCategoryVisible
+        ? categories.filter((c) => c.isVisible).map((c) => c.id)
+        : categories.map((c) => c.id)
+    );
 
     return events.filter((e) => {
       // Filtro de Colaborador (se desmarcado no painel, oculta imediatamente)
-      if (accounts.length > 0) {
+      if (accounts.length > 0 && hasAnyAccountVisible) {
         const collabId = e.collaboratorId || e.ctoId || 'collab_carlos';
-        const isMainOwnerVisible = visibleAccountIds.has(collabId) || collabId === 'all_team';
+        const isMainOwnerVisible =
+          visibleAccountIds.has(collabId) ||
+          collabId === 'all_team' ||
+          Array.from(visibleAccountIds).some((id) => id.includes(collabId) || collabId.includes(id));
         const isCoHostVisible = e.additionalCollaboratorIds?.some((id) => visibleAccountIds.has(id));
 
         if (!isMainOwnerVisible && !isCoHostVisible) {
@@ -260,8 +294,9 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       }
 
       // Filtro de Categoria (se desmarcado no painel, oculta imediatamente)
-      if (categories.length > 0 && e.categoryId) {
-        if (!visibleCategoryIds.has(e.categoryId)) {
+      if (categories.length > 0 && hasAnyCategoryVisible && e.categoryId) {
+        const categoryExists = categories.some((c) => c.id === e.categoryId);
+        if (categoryExists && !visibleCategoryIds.has(e.categoryId)) {
           return false;
         }
       }
@@ -488,6 +523,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           accounts={accounts}
           onSyncGoogle={handleSyncGoogle}
           isSyncing={isSyncing}
+          onClearEvents={loadData}
         />
       )}
     </div>

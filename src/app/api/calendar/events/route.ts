@@ -1,10 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { refreshGoogleAccessToken } from '@/lib/google-tokens';
+
+async function getValidGoogleAccessToken(request: NextRequest, explicitToken?: string, collaboratorId?: string): Promise<string | null> {
+  const token = explicitToken || request.cookies.get('google_access_token')?.value;
+  const cookieExpiry = request.cookies.get('google_token_expiry')?.value;
+  let refreshToken = request.cookies.get('google_refresh_token')?.value;
+
+  // Se o access token for válido e não expirar nos próximos 30s, retorna
+  if (token && (!cookieExpiry || new Date(cookieExpiry).getTime() > Date.now() + 30_000)) {
+    return token;
+  }
+
+  // Se não temos refresh token nos cookies, busca no Supabase
+  if (!refreshToken) {
+    let query = supabaseAdmin
+      .from('calendar_collaborators')
+      .select('google_access_token, google_refresh_token, google_token_expiry')
+      .not('google_refresh_token', 'is', null);
+
+    if (collaboratorId && collaboratorId !== 'all_team') {
+      query = query.eq('id', collaboratorId);
+    } else {
+      query = query.order('last_sync_at', { ascending: false });
+    }
+
+    const { data: collabDb } = await query.limit(1);
+    if (collabDb && collabDb.length > 0) {
+      refreshToken = collabDb[0].google_refresh_token;
+      // Se o access token do banco ainda for válido, aproveita
+      if (collabDb[0].google_access_token && collabDb[0].google_token_expiry) {
+        if (new Date(collabDb[0].google_token_expiry).getTime() > Date.now() + 30_000) {
+          return collabDb[0].google_access_token;
+        }
+      }
+    }
+  }
+
+  // Renova com o refresh token
+  if (refreshToken) {
+    const renewed = await refreshGoogleAccessToken(refreshToken);
+    if (renewed?.access_token) {
+      const renewedExpiry = new Date(Date.now() + (renewed.expires_in || 3600) * 1000).toISOString();
+      await supabaseAdmin.from('calendar_collaborators').update({
+        google_access_token: renewed.access_token,
+        google_token_expiry: renewedExpiry,
+        last_sync_at: new Date().toISOString(),
+      }).not('google_refresh_token', 'is', null);
+
+      return renewed.access_token;
+    }
+  }
+
+  return token || null;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      accessToken,
+      accessToken: explicitAccessToken,
+      collaboratorId,
       calendarId = 'primary',
       title,
       description,
@@ -18,13 +74,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios ausentes' }, { status: 400 });
     }
 
+    const accessToken = await getValidGoogleAccessToken(request, explicitAccessToken, collaboratorId);
+
     if (accessToken) {
-      const googleEventPayload: any = {
+      interface AttendeeInput {
+        email: string;
+        name?: string;
+      }
+      interface GoogleEventPayload {
+        summary: string;
+        description: string;
+        start: { dateTime: string; timeZone: string };
+        end: { dateTime: string; timeZone: string };
+        attendees: { email: string; displayName?: string }[];
+        conferenceData?: {
+          createRequest: {
+            requestId: string;
+            conferenceSolutionKey: { type: string };
+          };
+        };
+      }
+
+      const googleEventPayload: GoogleEventPayload = {
         summary: title,
         description: description || '',
         start: { dateTime: startTime, timeZone: 'America/Sao_Paulo' },
         end: { dateTime: endTime, timeZone: 'America/Sao_Paulo' },
-        attendees: attendees.map((a: any) => ({ email: a.email, displayName: a.name })),
+        attendees: (attendees as AttendeeInput[]).map((a) => ({ email: a.email, displayName: a.name })),
       };
 
       // Configuração para gerar link do Google Meet automaticamente
@@ -59,7 +135,11 @@ export async function POST(request: NextRequest) {
 
       let meetUrl = createdEvent.hangoutLink;
       if (!meetUrl && createdEvent.conferenceData?.entryPoints) {
-        const video = createdEvent.conferenceData.entryPoints.find((e: any) => e.entryPointType === 'video');
+        interface EntryPoint {
+          entryPointType: string;
+          uri: string;
+        }
+        const video = (createdEvent.conferenceData.entryPoints as EntryPoint[]).find((e) => e.entryPointType === 'video');
         if (video) meetUrl = video.uri;
       }
 
@@ -76,9 +156,10 @@ export async function POST(request: NextRequest) {
       success: true,
       meetUrl: `https://meet.google.com/nex-${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 5)}`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error('Erro na criação de evento:', err);
-    return NextResponse.json({ error: 'Erro interno ao criar evento', message: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erro interno ao criar evento', message }, { status: 500 });
   }
 }
 
@@ -88,13 +169,15 @@ export async function DELETE(request: NextRequest) {
     const eventId = searchParams.get('eventId');
     const calendarId = searchParams.get('calendarId') || 'primary';
     const authHeader = request.headers.get('Authorization');
-    const accessToken = authHeader?.replace('Bearer ', '');
+    const explicitToken = authHeader?.replace('Bearer ', '');
 
     if (!eventId) {
       return NextResponse.json({ error: 'ID do evento não informado' }, { status: 400 });
     }
 
-    if (accessToken && !eventId.startsWith('evt_')) {
+    const accessToken = await getValidGoogleAccessToken(request, explicitToken);
+
+    if (accessToken && !eventId.startsWith('evt_') && !eventId.startsWith('crm_opp_')) {
       const googleId = eventId.replace('google_', '');
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(googleId)}`;
 
@@ -105,7 +188,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Erro ao excluir evento', message: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: 'Erro ao excluir evento', message }, { status: 500 });
   }
 }

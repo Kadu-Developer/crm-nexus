@@ -61,15 +61,37 @@ export async function GET(request: NextRequest) {
     const userEmail = (googleProfile.email || 'carlos@nexusflowtech.com.br').toLowerCase().trim();
     const userName = googleProfile.name || 'Carlos Eduardo';
 
+    const state = stateStr ? JSON.parse(stateStr) : {};
+    let collabId = state.collaboratorId || '';
+
+    if (!collabId) {
+      // Tenta localizar por e-mail no banco
+      const { data: existingCollabs } = await supabaseAdmin
+        .from('calendar_collaborators')
+        .select('id, name, role_title, department, avatar, color')
+        .eq('email', userEmail)
+        .limit(1);
+
+      if (existingCollabs && existingCollabs.length > 0) {
+        collabId = existingCollabs[0].id;
+      } else if (userEmail.includes('marcel')) {
+        collabId = 'collab_marcel';
+      } else if (userEmail.includes('patrik')) {
+        collabId = 'collab_patrik';
+      } else {
+        collabId = 'collab_carlos';
+      }
+    }
+
     // 3. Salvar / Atualizar colaborador com Google conectado (DEVE ser antes dos eventos devido à FK)
     const { error: collaboratorError } = await supabaseAdmin.from('calendar_collaborators').upsert({
-      id: 'collab_carlos',
+      id: collabId,
       name: userName,
       email: userEmail,
-      role_title: 'Diretor / CTO',
-      department: 'executivo',
-      avatar: 'CE',
-      color: '#0284c7',
+      role_title: collabId === 'collab_marcel' ? 'Founder & CEO / CFO' : collabId === 'collab_patrik' ? 'CTO & IA' : 'Tech Lead & Engenharia',
+      department: collabId === 'collab_marcel' ? 'executivo' : 'engenharia',
+      avatar: userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'CR',
+      color: collabId === 'collab_marcel' ? '#f59e0b' : collabId === 'collab_patrik' ? '#8b5cf6' : '#0284c7',
       google_calendar_id: userEmail,
       google_connected: true,
       sync_status: 'synced',
@@ -87,14 +109,86 @@ export async function GET(request: NextRequest) {
     // 5. Redirecionar imediatamente para o CRM. A sincronização dos eventos é feita
     //    pelo front-end chamando /api/calendar/sync, evitando segurar a resposta e
     //    estourar o timeout das funções serverless da Vercel.
-    const state = stateStr ? JSON.parse(stateStr) : {};
-    const redirectPath = state.redirectPath || '/';
+    const redirectPath = state.redirectPath || '/?view=calendar';
 
     const redirectUrl = new URL(redirectPath, origin);
     redirectUrl.searchParams.set('google_connected', 'true');
     redirectUrl.searchParams.set('email', userEmail);
+    redirectUrl.searchParams.set('view', 'calendar');
 
-    const response = NextResponse.redirect(redirectUrl.toString());
+    const htmlContent = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Google Agenda Conectada</title>
+  <style>
+    body {
+      background: #090d16;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #1e293b;
+      padding: 2rem;
+      border-radius: 1rem;
+      border: 1px solid #334155;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+      max-width: 380px;
+      width: 100%;
+    }
+    .icon {
+      font-size: 2.5rem;
+      color: #22c55e;
+      margin-bottom: 0.75rem;
+    }
+    h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✓</div>
+    <h2>Google Agenda Conectada!</h2>
+    <p>Sincronizando eventos... Você já pode voltar para sua tela.</p>
+  </div>
+  <script>
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', email: ${JSON.stringify(userEmail)} }, '*');
+        setTimeout(function() {
+          window.close();
+        }, 400);
+      } else {
+        window.location.replace(${JSON.stringify(redirectUrl.toString())});
+      }
+    } catch (e) {
+      window.location.replace(${JSON.stringify(redirectUrl.toString())});
+    }
+  </script>
+</body>
+</html>`;
+
+    const response = new NextResponse(htmlContent, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+      },
+    });
 
     // Configurar cookies de autenticação do Google
     response.cookies.set('google_access_token', access_token, {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
+import { FALLBACK_CATEGORY } from '@/lib/calendar-mock-data';
 import { Video, Flame } from 'lucide-react';
 
 interface CalendarMonthGridProps {
@@ -85,8 +86,9 @@ export function CalendarMonthGrid({
     return found || { name: 'Colaborador', color: '#6366f1', avatar: 'N' };
   };
 
-  const getCategoryInfo = (catId: string) => {
-    return categories.find((c) => c.id === catId) || categories[0];
+  const getCategoryInfo = (catId?: string) => {
+    if (!catId) return categories[0] || FALLBACK_CATEGORY;
+    return categories.find((c) => c.id === catId) || categories[0] || FALLBACK_CATEGORY;
   };
 
   return (

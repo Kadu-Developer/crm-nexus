@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
+import { FALLBACK_CATEGORY } from '@/lib/calendar-mock-data';
 import { Video, Repeat, Sparkles, Flame, Users } from 'lucide-react';
 
 interface CalendarWeekGridProps {
@@ -82,8 +83,9 @@ export function CalendarWeekGrid({
     };
   };
 
-  const getCategoryInfo = (catId: string) => {
-    return categories.find((c) => c.id === catId) || categories[0];
+  const getCategoryInfo = (catId?: string) => {
+    if (!catId) return categories[0] || FALLBACK_CATEGORY;
+    return categories.find((c) => c.id === catId) || categories[0] || FALLBACK_CATEGORY;
   };
 
   return (

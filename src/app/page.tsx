@@ -56,7 +56,42 @@ function AppContent() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddCollabOpen, setIsAddCollabOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar' | 'suggestions'>('dashboard');
+  type ViewMode = 'kanban' | 'dashboard' | 'tasks' | 'clients' | 'calendar' | 'suggestions';
+  const [currentView, _setCurrentView] = useState<ViewMode>('dashboard');
+
+  const setCurrentView = useCallback((view: ViewMode) => {
+    _setCurrentView(view);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nexus_current_view', view);
+      } catch {}
+    }
+  }, []);
+
+  // Restaura visão anterior salva ou ativa a Agenda se vier de redirecionamento / OAuth
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      const isGoogleConnected = params.get('google_connected') === 'true';
+
+      if (viewParam === 'calendar' || isGoogleConnected) {
+        queueMicrotask(() => _setCurrentView('calendar'));
+        try {
+          localStorage.setItem('nexus_current_view', 'calendar');
+        } catch {}
+        return;
+      }
+
+      try {
+        const savedView = localStorage.getItem('nexus_current_view') as ViewMode | null;
+        if (savedView && ['kanban', 'dashboard', 'tasks', 'clients', 'calendar', 'suggestions'].includes(savedView)) {
+          queueMicrotask(() => _setCurrentView(savedView));
+        }
+      } catch {}
+    }
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingData, setLoadingData] = useState(false);
   const [consultantFilter, setConsultantFilter] = useState<string>('all');
@@ -236,6 +271,59 @@ function AppContent() {
     await crmService.updateQualification(oppId, qual);
   };
 
+  // Excluir Lead Completo (Empresa e todas as Oportunidades vinculadas)
+  const handleDeleteLead = async (params: {
+    opportunityIds: string[];
+    companyId?: string;
+    companyName?: string;
+    cnpj?: string;
+  }) => {
+    const oppIds = params.opportunityIds || [];
+    const compName = params.companyName?.trim().toLowerCase() || '';
+    const cnpj = params.cnpj?.trim() || '';
+
+    // Atualização otimista imediata no estado
+    setOpportunities((prev) =>
+      prev.filter((opp) => {
+        if (oppIds.includes(opp.id)) return false;
+        if (cnpj && opp.cnpj === cnpj) return false;
+        if (compName && opp.companyName.toLowerCase() === compName) return false;
+        return true;
+      })
+    );
+
+    // Fecha modal de detalhes se a oportunidade excluída estiver aberta
+    if (
+      selectedOpportunity &&
+      (oppIds.includes(selectedOpportunity.id) ||
+        (compName && selectedOpportunity.companyName.toLowerCase() === compName))
+    ) {
+      setSelectedOpportunity(null);
+      setIsDetailOpen(false);
+    }
+
+    const res = await crmService.deleteLead(params);
+    if (!res.success) {
+      throw new Error(res.error || 'Erro ao excluir lead');
+    }
+  };
+
+  // Excluir Oportunidade Individual
+  const handleDeleteOpportunity = async (oppId: string) => {
+    const target = opportunities.find((o) => o.id === oppId);
+    setOpportunities((prev) => prev.filter((o) => o.id !== oppId));
+
+    if (selectedOpportunity?.id === oppId) {
+      setSelectedOpportunity(null);
+      setIsDetailOpen(false);
+    }
+
+    const res = await crmService.deleteOpportunity(oppId, target?.companyId);
+    if (!res.success) {
+      throw new Error(res.error || 'Erro ao excluir oportunidade');
+    }
+  };
+
   const handleOpenDetail = (opp: Opportunity) => {
     setSelectedOpportunity(opp);
     setIsDetailOpen(true);
@@ -277,7 +365,7 @@ function AppContent() {
       {/* Navegação lateral compacta */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-14 flex-col items-center border-r border-[#0b3d8f] bg-[#052D72] pt-20 md:flex">
         <div className="flex flex-col items-center gap-2">
-          <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={30} className="mb-2 h-8 w-7 object-contain" />
+          <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={32} style={{ width: 'auto', height: 'auto' }} className="mb-2 object-contain" priority />
           <button
             type="button"
             onClick={() => setCurrentView('dashboard')}
@@ -748,6 +836,7 @@ function AppContent() {
           <ClientPortfolio
             opportunities={displayedOpportunities}
             onSelectOpportunity={handleOpenDetail}
+            onDeleteLead={handleDeleteLead}
           />
         )}
 
@@ -833,6 +922,7 @@ function AppContent() {
         onClose={() => setIsDetailOpen(false)}
         onAddActivity={handleAddActivity}
         onUpdateQualification={handleUpdateQualification}
+        onDeleteOpportunity={handleDeleteOpportunity}
       />
 
       <AddCollaboratorModal

@@ -116,3 +116,16 @@ export const DEFAULT_GOOGLE_SETTINGS: GoogleIntegrationSettings = {
 };
 
 export const INITIAL_CALENDAR_EVENTS: CalendarEvent[] = [];
+
+export const FALLBACK_CATEGORY: CalendarCategory = {
+  id: 'default',
+  name: 'Geral',
+  color: '#0284c7',
+  borderColor: 'border-blue-500',
+  bgLight: 'bg-blue-50 text-blue-900 border-blue-200',
+  bgDark: 'dark:bg-blue-950/70 dark:text-blue-200 dark:border-blue-800/80',
+  textLight: 'text-blue-700',
+  textDark: 'dark:text-blue-300',
+  isVisible: true,
+};
+

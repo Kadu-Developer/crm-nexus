@@ -1,8 +1,29 @@
 import { supabase } from './client';
 import { Opportunity, PipelineStage, Activity, Contact, Qualification, Segment, RevenueTier, DecisionInfluence } from '@/types/crm';
-import { INITIAL_OPPORTUNITIES } from '@/lib/mock-data';
 
 const DEMO_OPPORTUNITIES_KEY = 'nexus_demo_opportunities';
+const DELETED_LEADS_KEY = 'nexus_deleted_lead_keys';
+
+function getDeletedLeadKeys(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(DELETED_LEADS_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function addDeletedLeadKey(key: string) {
+  if (typeof window === 'undefined' || !key) return;
+  try {
+    const keys = getDeletedLeadKeys();
+    keys.add(key.toLowerCase().trim());
+    localStorage.setItem(DELETED_LEADS_KEY, JSON.stringify(Array.from(keys)));
+  } catch {
+    // Silently ignore
+  }
+}
 
 async function getDemoOpportunities(): Promise<Opportunity[]> {
   if (typeof window === 'undefined') return [];
@@ -10,17 +31,27 @@ async function getDemoOpportunities(): Promise<Opportunity[]> {
   try {
     const stored = localStorage.getItem(DEMO_OPPORTUNITIES_KEY);
     let storedOpportunities = stored ? JSON.parse(stored) as Opportunity[] : [];
+    const deletedKeys = getDeletedLeadKeys();
     
-    // Remove quaisquer leads mock legados (ex: opp_1, opp_2)
-    storedOpportunities = storedOpportunities.filter((o) => !o.id.startsWith('opp_'));
+    // Remove quaisquer leads mock legados (ex: opp_1, opp_2) e leads excluídos
+    storedOpportunities = storedOpportunities.filter((o) => {
+      if (o.id.startsWith('opp_')) return false;
+      if (deletedKeys.has(o.id.toLowerCase().trim())) return false;
+      const compKey = (o.cnpj || o.companyName || '').toLowerCase().trim();
+      if (compKey && deletedKeys.has(compKey)) return false;
+      return true;
+    });
     saveDemoOpportunities(storedOpportunities);
 
     const sheetOpportunities = await getGoogleSheetOpportunities();
     if (sheetOpportunities.length > 0) {
-      const existingKeys = new Set(storedOpportunities.map((opportunity) => opportunity.cnpj || opportunity.companyName.toLowerCase()));
+      const existingKeys = new Set([
+        ...storedOpportunities.map((opportunity) => (opportunity.cnpj || opportunity.companyName || '').toLowerCase().trim()),
+        ...Array.from(deletedKeys),
+      ]);
       const newSheetOpportunities = sheetOpportunities.filter((opportunity) => {
-        const key = opportunity.cnpj || opportunity.companyName.toLowerCase();
-        return !existingKeys.has(key);
+        const key = (opportunity.cnpj || opportunity.companyName || '').toLowerCase().trim();
+        return !existingKeys.has(key) && !deletedKeys.has(key) && !deletedKeys.has(opportunity.id);
       });
       const mergedOpportunities = [...storedOpportunities, ...newSheetOpportunities];
       saveDemoOpportunities(mergedOpportunities);
@@ -231,7 +262,8 @@ const toPipelineStage = (val: string): PipelineStage => {
 
 export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
   const company = (row.company as SupabaseRow) || {};
-  const contacts: Contact[] = ((row.contacts as SupabaseRow[]) || []).map((c: SupabaseRow) => ({
+  const rawContacts = ((row.contacts as SupabaseRow[]) || (company.contacts as SupabaseRow[]) || []);
+  const contacts: Contact[] = rawContacts.map((c: SupabaseRow) => ({
     id: getString(c, 'id'),
     companyId: getString(row, 'company_id', 'comp_1'),
     name: getString(c, 'name', 'Contato'),
@@ -296,6 +328,7 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
 
   return {
     id: getString(row, 'id'),
+    companyId: getString(row, 'company_id') || getString(company, 'id') || undefined,
     companyName: getString(company, 'corporate_name') || getString(company, 'trade_name') || getString(company, 'legal_name', 'Empresa'),
     tradeName: getString(company, 'trade_name') || getString(company, 'corporate_name') || getString(company, 'legal_name', 'Empresa'),
     cnpj: getString(company, 'cnpj'),
@@ -338,9 +371,11 @@ export const crmService = {
         .from('opportunities')
         .select(`
           *,
-          company:companies(*),
+          company:companies(
+            *,
+            contacts(*)
+          ),
           consultant:profiles(*),
-          contacts(*),
           qualification:qualifications(*),
           activities(*)
         `)
@@ -640,25 +675,86 @@ export const crmService = {
     };
   },
 
-  // 7. Excluir oportunidade (apenas para administradores)
-  async deleteOpportunity(oppId: string): Promise<{ success: boolean }> {
-    try {
-      if (isUUID(oppId)) {
-        const { error } = await supabase
-          .from('opportunities')
-          .delete()
-          .eq('id', oppId);
+  // 7. Excluir lead completo (empresa e todas as suas oportunidades)
+  async deleteLead(params: {
+    opportunityIds?: string[];
+    companyId?: string;
+    companyName?: string;
+    cnpj?: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    const oppIds = params.opportunityIds || [];
+    const compName = params.companyName?.trim() || '';
+    const cnpj = params.cnpj?.trim() || '';
 
-        if (!error) return { success: true };
+    // 1. Marca chaves na blacklist local para não reaparecer do Google Sheets / Demo
+    if (cnpj) addDeletedLeadKey(cnpj);
+    if (compName) addDeletedLeadKey(compName);
+    oppIds.forEach((id) => addDeletedLeadKey(id));
+
+    // 2. Chama rota de API segura do backend com supabaseAdmin
+    if (typeof window !== 'undefined') {
+      try {
+        const res = await fetch('/api/crm/leads', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            opportunityIds: oppIds,
+            companyId: params.companyId,
+            companyName: compName,
+            cnpj,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            // Atualiza storage local também
+            const currentOpportunities = await getDemoOpportunities();
+            const updatedOpportunities = currentOpportunities.filter((o) => {
+              if (oppIds.includes(o.id)) return false;
+              if (cnpj && o.cnpj === cnpj) return false;
+              if (compName && o.companyName.toLowerCase() === compName.toLowerCase()) return false;
+              return true;
+            });
+            saveDemoOpportunities(updatedOpportunities);
+            return { success: true };
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API /api/crm/leads falhou ou indisponível:', apiErr);
       }
-    } catch (err) {
-      console.warn('Erro ao excluir oportunidade no Supabase:', err);
     }
 
-    // Fallback local
+    // 3. Fallback client-side Supabase
+    try {
+      const validOppIds = oppIds.filter(isUUID);
+      if (validOppIds.length > 0) {
+        await supabase.from('opportunities').delete().in('id', validOppIds);
+      }
+      if (params.companyId && isUUID(params.companyId)) {
+        await supabase.from('companies').delete().eq('id', params.companyId);
+      }
+    } catch (sbErr) {
+      console.warn('Fallback Supabase client falhou:', sbErr);
+    }
+
+    // 4. Fallback local
     const currentOpportunities = await getDemoOpportunities();
-    const updatedOpportunities = currentOpportunities.filter((o) => o.id !== oppId);
+    const updatedOpportunities = currentOpportunities.filter((o) => {
+      if (oppIds.includes(o.id)) return false;
+      if (cnpj && o.cnpj === cnpj) return false;
+      if (compName && o.companyName.toLowerCase() === compName.toLowerCase()) return false;
+      return true;
+    });
     saveDemoOpportunities(updatedOpportunities);
     return { success: true };
+  },
+
+  // 8. Excluir oportunidade individual
+  async deleteOpportunity(oppId: string, companyId?: string): Promise<{ success: boolean; error?: string }> {
+    return this.deleteLead({
+      opportunityIds: [oppId],
+      companyId,
+    });
   }
 };

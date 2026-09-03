@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { CalendarMiniPicker } from './CalendarMiniPicker';
 import { CollaboratorAccount, CalendarCategory, Department } from '@/types/calendar';
 import { Search, Settings, Plus, Check, RefreshCw, Layers, Users, UserPlus, CheckCheck, Square } from 'lucide-react';
+import { openGoogleOAuthPopup } from '@/lib/google-auth';
 
 interface CalendarLeftSidebarProps {
   selectedDate: Date;
@@ -86,10 +87,10 @@ export function CalendarLeftSidebar({
             type="button"
             onClick={async () => {
               try {
-                const res = await fetch('/api/calendar/auth');
+                const res = await fetch('/api/calendar/auth?redirect=/?view=calendar');
                 const data = await res.json();
                 if (data.authUrl) {
-                  window.open(data.authUrl, '_blank');
+                  openGoogleOAuthPopup(data.authUrl);
                 }
               } catch {
                 onOpenGoogleSettings();

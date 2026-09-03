@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
+import { FALLBACK_CATEGORY } from '@/lib/calendar-mock-data';
 import { Video, Repeat, Flame, Clock, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
 
 interface CalendarAgendaListProps {
@@ -40,8 +41,9 @@ export function CalendarAgendaList({
     return found || { name: 'Colaborador', color: '#6366f1', avatar: 'N' };
   };
 
-  const getCategoryInfo = (catId: string) => {
-    return categories.find((c) => c.id === catId) || categories[0];
+  const getCategoryInfo = (catId?: string) => {
+    if (!catId) return categories[0] || FALLBACK_CATEGORY;
+    return categories.find((c) => c.id === catId) || categories[0] || FALLBACK_CATEGORY;
   };
 
   const formatDateHeader = (dateStr: string) => {

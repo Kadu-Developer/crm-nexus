@@ -11,43 +11,71 @@ import { crmService } from '@/lib/supabase/crm-service';
 interface ClientPortfolioProps {
   opportunities: Opportunity[];
   onSelectOpportunity: (opportunity: Opportunity) => void;
+  onDeleteLead?: (params: {
+    opportunityIds: string[];
+    companyId?: string;
+    companyName?: string;
+    cnpj?: string;
+  }) => Promise<void> | void;
 }
 
-export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPortfolioProps) {
+export function ClientPortfolio({ opportunities, onSelectOpportunity, onDeleteLead }: ClientPortfolioProps) {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
   const [search, setSearch] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const deleteLead = async (leadId: string) => {
+  const handleDeleteClient = async (client: {
+    id: string;
+    name: string;
+    legalName: string;
+    opportunities: Opportunity[];
+  }) => {
     if (!isAdmin) {
       toast.error('Acesso negado: somente administradores podem excluir leads');
       return;
     }
 
-    if (window.confirm('Tem certeza que deseja excluir este lead e todas as suas oportunidades? Esta ação não pode ser desfeita.')) {
-      try {
-        // client.id pode ser CNPJ ou companyName - precisamos deletar todas as oportunidades do cliente
-        const clientOpps = opportunities.filter(
-          (o) => (o.cnpj || o.companyName.toLowerCase()) === leadId
-        );
-        
-        if (clientOpps.length === 0) {
-          toast.error('Nenhuma oportunidade encontrada para este lead');
-          return;
-        }
+    const leadName = client.name || client.legalName || 'este lead';
+    if (!window.confirm(`Tem certeza que deseja excluir o lead "${leadName}" e todas as suas ${client.opportunities.length} oportunidade(s)? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
 
-        // Deletar todas as oportunidades do cliente
-        for (const opp of clientOpps) {
-          await crmService.deleteOpportunity(opp.id);
+    setDeletingId(client.id);
+    const toastId = toast.loading(`Excluindo lead "${leadName}"...`);
+
+    try {
+      const oppIds = client.opportunities.map((o) => o.id);
+      const companyId = client.opportunities.find((o) => o.companyId)?.companyId;
+      const cnpj = client.opportunities.find((o) => o.cnpj)?.cnpj;
+
+      if (onDeleteLead) {
+        await onDeleteLead({
+          opportunityIds: oppIds,
+          companyId,
+          companyName: client.legalName || client.name,
+          cnpj,
+        });
+      } else {
+        const res = await crmService.deleteLead({
+          opportunityIds: oppIds,
+          companyId,
+          companyName: client.legalName || client.name,
+          cnpj,
+        });
+        if (!res.success) {
+          throw new Error(res.error || 'Falha ao excluir lead');
         }
-        
-        toast.success(`Lead excluído (${clientOpps.length} oportunidade(s) removida(s))`);
-        window.location.reload();
-      } catch (err) {
-        toast.error('Erro ao excluir lead');
-        console.error(err);
       }
+
+      toast.success(`Lead "${leadName}" excluído com sucesso!`, { id: toastId });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Tente novamente';
+      console.error('Erro ao excluir lead:', err);
+      toast.error(`Erro ao excluir lead: ${message}`, { id: toastId });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -137,14 +165,16 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity }: ClientPo
                   <span className="shrink-0 border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">{client.opportunities.length} {client.opportunities.length === 1 ? 'oportunidade' : 'oportunidades'}</span>
                   {isAdmin && (
                     <button
+                      type="button"
+                      disabled={deletingId === client.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteLead(client.id);
+                        handleDeleteClient(client);
                       }}
-                      className="p-1 rounded-lg text-rose-500 hover:text-rose-600 dark:hover:text-rose-400"
+                      className="p-1.5 rounded-lg text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50 cursor-pointer"
                       title="Excluir lead"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className={`w-4 h-4 ${deletingId === client.id ? 'animate-pulse opacity-50' : ''}`} />
                     </button>
                   )}
                 </div>

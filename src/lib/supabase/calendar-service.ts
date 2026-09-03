@@ -10,6 +10,46 @@ const STORAGE_KEYS = {
   SETTINGS: 'nexus_calendar_google_settings_v2',
 };
 
+interface RawCollaboratorRow {
+  id: string;
+  name: string;
+  role_title: string;
+  department: CollaboratorAccount['department'];
+  email: string;
+  avatar: string;
+  color: string;
+  google_calendar_id: string;
+  google_connected: boolean;
+  sync_status: CollaboratorAccount['syncStatus'];
+  last_sync_at: string;
+  is_visible: boolean;
+}
+
+interface RawEventRow {
+  id: string;
+  title: string;
+  description: string | null;
+  collaborator_id: string;
+  additional_collaborator_ids: string[] | null;
+  category_id: string;
+  start_time: string;
+  end_time: string;
+  is_all_day: boolean;
+  meet_url: string | null;
+  location: string | null;
+  attendees: CalendarEvent['attendees'] | null;
+  linked_opportunity_id: string | null;
+  opportunity_title: string | null;
+  opportunity_company_name: string | null;
+  opportunity_score: number | null;
+  stage_title: string | null;
+  recurrence: CalendarEvent['recurrence'] | null;
+  source: CalendarEvent['source'];
+  status: CalendarEvent['status'];
+  created_at: string;
+  updated_at: string;
+}
+
 class CalendarService {
   private getStorageItem<T>(key: string, defaultValue: T): T {
     if (typeof window === 'undefined') return defaultValue;
@@ -39,9 +79,9 @@ class CalendarService {
       const res = await fetch('/api/calendar/data?include=collaborators', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const rows = data.collaborators || [];
+        const rows = (data.collaborators || []) as RawCollaboratorRow[];
         if (rows.length > 0) {
-          list = rows.map((d: any) => ({
+          list = rows.map((d) => ({
             id: d.id,
             name: d.name,
             roleTitle: d.role_title,
@@ -61,67 +101,34 @@ class CalendarService {
       // Ignora e usa fallback
     }
 
-    // Fallback: leitura direta via supabase client
-    if (list.length === 0) {
-      try {
-        const { data, error } = await supabase
-          .from('calendar_collaborators')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (!error && data && data.length > 0) {
-          list = data.map((d: any) => ({
-            id: d.id,
-            name: d.name,
-            roleTitle: d.role_title,
-            department: d.department,
-            email: d.email,
-            avatar: d.avatar,
-            color: d.color,
-            googleCalendarId: d.google_calendar_id,
-            googleConnected: d.google_connected,
-            syncStatus: d.sync_status,
-            lastSyncAt: d.last_sync_at,
-            isVisible: d.is_visible,
-          }));
-        }
-      } catch {
-        // Ignora e usa fallback
-      }
-    }
-
     if (list.length === 0) {
       list = this.getStorageItem<CollaboratorAccount[]>(STORAGE_KEYS.COLLABORATORS, DEFAULT_COLLABORATORS);
-      try {
-        await supabase.from('calendar_collaborators').upsert(
-          list.map((c) => ({
-            id: c.id,
-            name: c.name,
-            role_title: c.roleTitle,
-            department: c.department,
-            email: c.email,
-            avatar: c.avatar,
-            color: c.color,
-            google_calendar_id: c.googleCalendarId,
-            google_connected: c.googleConnected,
-            sync_status: c.syncStatus,
-            last_sync_at: c.lastSyncAt,
-            is_visible: c.isVisible,
-          }))
-        );
-      } catch {
-        // Ignora erro se tabelas ainda não estiverem migradas remotamente
+    }
+
+    // Mescla com DEFAULT_COLLABORATORS para garantir que os colaboradores da equipe (Marcel, Patrik, Carlos) estejam sempre presentes
+    const combined = [...list];
+    for (const def of DEFAULT_COLLABORATORS) {
+      const exists = combined.some(
+        (c) =>
+          c.id === def.id ||
+          (c.email && def.email && c.email.toLowerCase() === def.email.toLowerCase())
+      );
+      if (!exists) {
+        combined.push(def);
       }
     }
 
-    // Desduplica por e-mail ou prefixo de nome
+    // Desduplica por e-mail ou id e garante isVisible
     const seen = new Set<string>();
-    const deduplicated = list.filter((c) => {
-      const key = (c.email || c.name || c.id).toLowerCase().trim();
+    const deduplicated = combined.filter((c) => {
+      const key = (c.email || c.id).toLowerCase().trim();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    });
+    }).map((c) => ({
+      ...c,
+      isVisible: c.isVisible !== false,
+    }));
 
     this.setStorageItem(STORAGE_KEYS.COLLABORATORS, deduplicated);
     return deduplicated;
@@ -151,9 +158,17 @@ class CalendarService {
         is_visible: c.isVisible,
       }));
 
-      await supabase.from('calendar_collaborators').upsert(upsertPayload);
+      if (typeof window !== 'undefined') {
+        fetch('/api/calendar/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: 'collaborators', data: upsertPayload }),
+        }).catch(() => {
+          // Ignora erro
+        });
+      }
     } catch {
-      // Ignora erro se tabelas ainda não estiverem migradas remotamente
+      // Ignora erro
     }
   }
 
@@ -190,12 +205,12 @@ class CalendarService {
       const res = await fetch('/api/calendar/data?include=events', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const rows = data.events || [];
+        const rows = (data.events || []) as RawEventRow[];
         if (rows.length > 0) {
-          events = rows.map((d: any) => ({
+          events = rows.map((d) => ({
             id: d.id,
             title: d.title,
-            description: d.description,
+            description: d.description || '',
             collaboratorId: d.collaborator_id,
             ctoId: d.collaborator_id,
             additionalCollaboratorIds: d.additional_collaborator_ids || [],
@@ -203,14 +218,14 @@ class CalendarService {
             startTime: d.start_time,
             endTime: d.end_time,
             isAllDay: d.is_all_day,
-            meetUrl: d.meet_url,
-            location: d.location,
+            meetUrl: d.meet_url || undefined,
+            location: d.location || '',
             attendees: d.attendees || [],
-            linkedOpportunityId: d.linked_opportunity_id,
-            opportunityTitle: d.opportunity_title,
-            opportunityCompanyName: d.opportunity_company_name,
-            opportunityScore: d.opportunity_score,
-            stageTitle: d.stage_title,
+            linkedOpportunityId: d.linked_opportunity_id || undefined,
+            opportunityTitle: d.opportunity_title || undefined,
+            opportunityCompanyName: d.opportunity_company_name || undefined,
+            opportunityScore: d.opportunity_score || undefined,
+            stageTitle: d.stage_title || undefined,
             recurrence: d.recurrence || 'none',
             source: d.source,
             status: d.status,
@@ -232,10 +247,10 @@ class CalendarService {
           .order('start_time', { ascending: true });
 
         if (!error && data && data.length > 0) {
-          events = data.map((d: any) => ({
+          events = (data as unknown as RawEventRow[]).map((d) => ({
             id: d.id,
             title: d.title,
-            description: d.description,
+            description: d.description || '',
             collaboratorId: d.collaborator_id,
             ctoId: d.collaborator_id,
             additionalCollaboratorIds: d.additional_collaborator_ids || [],
@@ -243,14 +258,14 @@ class CalendarService {
             startTime: d.start_time,
             endTime: d.end_time,
             isAllDay: d.is_all_day,
-            meetUrl: d.meet_url,
-            location: d.location,
+            meetUrl: d.meet_url || undefined,
+            location: d.location || '',
             attendees: d.attendees || [],
-            linkedOpportunityId: d.linked_opportunity_id,
-            opportunityTitle: d.opportunity_title,
-            opportunityCompanyName: d.opportunity_company_name,
-            opportunityScore: d.opportunity_score,
-            stageTitle: d.stage_title,
+            linkedOpportunityId: d.linked_opportunity_id || undefined,
+            opportunityTitle: d.opportunity_title || undefined,
+            opportunityCompanyName: d.opportunity_company_name || undefined,
+            opportunityScore: d.opportunity_score || undefined,
+            stageTitle: d.stage_title || undefined,
             recurrence: d.recurrence || 'none',
             source: d.source,
             status: d.status,
@@ -263,41 +278,22 @@ class CalendarService {
       }
     }
 
-    // 3. Sempre sincroniza com Google Calendar (se disponível)
-    if (typeof window !== 'undefined') {
-      try {
-        const syncRes = await fetch('/api/calendar/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        if (syncRes.ok) {
-          const syncData = await syncRes.json();
-          if (syncData.events && syncData.events.length > 0) {
-            // Merge: adiciona eventos do Google que ainda não existem
-            for (const ge of syncData.events as CalendarEvent[]) {
-              if (!events.some((e) => e.id === ge.id)) {
-                events.push(ge);
-              }
-            }
-          }
-        }
-      } catch {
-        // Fallback silencioso
-      }
-    }
-    if (events.length === 0) {
-      events = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
-    }
-
-    // 4. Salva eventos no localStorage para cache
-    if (events.length > 0) {
-      this.setStorageItem(STORAGE_KEYS.EVENTS, events);
-    }
+    // Atualiza cache local com o estado real da base
+    this.setStorageItem(STORAGE_KEYS.EVENTS, events);
 
     // 5. Sincroniza reuniões do CRM (opportunities com nextActionDate)
     if (crmOpportunities && crmOpportunities.length > 0) {
+      // Limpa eventos de CRM cujas oportunidades foram excluídas
+      const activeOppIds = new Set(crmOpportunities.map((o) => o.id));
+      events = events.filter((e) => {
+        if (e.source === 'crm_nexus' && e.linkedOpportunityId) {
+          return activeOppIds.has(e.linkedOpportunityId);
+        }
+        return true;
+      });
+
       const crmEvents: CalendarEvent[] = [];
+      const currentCollaborators = await this.getCollaborators();
       
       crmOpportunities.forEach((opp) => {
         if (opp.nextActionDate && !events.some((e) => e.linkedOpportunityId === opp.id)) {
@@ -305,12 +301,23 @@ class CalendarService {
           if (!isNaN(actionDate.getTime())) {
             const endDate = new Date(actionDate.getTime() + 60 * 60 * 1000);
             
+            // Encontra o colaborador correto pelo consultantId ou consultantName
+            const oppConsultantKey = (opp.consultantId || opp.consultantName || '').toLowerCase().trim();
+            const matchedCollab = currentCollaborators.find((c) =>
+              c.id.toLowerCase() === oppConsultantKey ||
+              c.email.toLowerCase() === oppConsultantKey ||
+              c.name.toLowerCase().includes(oppConsultantKey.split(' ')[0]) ||
+              (oppConsultantKey && c.name.toLowerCase().split(' ')[0] === oppConsultantKey.split(' ')[0])
+            ) || currentCollaborators.find((c) => c.id === 'collab_carlos') || currentCollaborators[0];
+
+            const assignedId = matchedCollab?.id || 'collab_carlos';
+
             crmEvents.push({
               id: `crm_opp_${opp.id}`,
-              title: `${opp.nextActionDescription} | ${opp.tradeName || opp.companyName}`,
-              description: `Compromisso do lead ${opp.tradeName || opp.companyName}. Score: ${opp.score} pts. Responsável: ${opp.consultantName}`,
-              collaboratorId: 'collab_carlos',
-              ctoId: 'collab_carlos',
+              title: `${opp.nextActionDescription || 'Reunião CRM'} | ${opp.tradeName || opp.companyName}`,
+              description: `Compromisso do lead ${opp.tradeName || opp.companyName}. Score: ${opp.score || 0} pts. Responsável: ${opp.consultantName || matchedCollab?.name}`,
+              collaboratorId: assignedId,
+              ctoId: assignedId,
               categoryId: 'crm_diagnostico',
               startTime: actionDate.toISOString(),
               endTime: endDate.toISOString(),
@@ -455,7 +462,6 @@ class CalendarService {
     this.setStorageItem(STORAGE_KEYS.EVENTS, filtered);
 
     try {
-      await supabase.from('calendar_events').delete().eq('id', eventId);
       await fetch(`/api/calendar/events?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
     } catch {
       // Ignora erro
@@ -464,9 +470,35 @@ class CalendarService {
     return true;
   }
 
+  // 6. Limpar todos os eventos da base de dados e do cache
+  public async clearAllEvents(): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await fetch('/api/calendar/data?target=events', { method: 'DELETE' });
+      if (res.ok) {
+        this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+        return { success: true, message: 'Base de eventos limpa com sucesso.' };
+      }
+    } catch {
+      // Ignora erro
+    }
+
+    this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+    return { success: true, message: 'Base de eventos limpa com sucesso.' };
+  }
+
   // 7. Categorias
   public async getCategories(): Promise<CalendarCategory[]> {
-    return this.getStorageItem<CalendarCategory[]>(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+    const list = this.getStorageItem<CalendarCategory[]>(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+    const merged = [...(list || [])];
+    for (const def of DEFAULT_CATEGORIES) {
+      if (!merged.some((c) => c.id === def.id)) {
+        merged.push(def);
+      }
+    }
+    return merged.map((c) => ({
+      ...c,
+      isVisible: c.isVisible !== false,
+    }));
   }
 
   public async saveCategories(categories: CalendarCategory[]): Promise<void> {
@@ -481,17 +513,28 @@ class CalendarService {
   public async saveGoogleSettings(settings: GoogleIntegrationSettings): Promise<void> {
     this.setStorageItem(STORAGE_KEYS.SETTINGS, settings);
     try {
-      await supabase.from('calendar_settings').upsert({
-        id: 'global_settings',
-        domain: settings.domain,
-        domain_wide_sync: settings.domainWideSync,
-        auto_sync_interval_minutes: settings.autoSyncIntervalMinutes,
-        sync_crm_diagnosticos: settings.syncCrmDiagnosticos,
-        webhook_url: settings.webhookUrl,
-        google_client_id: settings.googleClientId,
-        service_account_configured: settings.serviceAccountConfigured,
-        last_global_sync_at: new Date().toISOString(),
-      });
+      if (typeof window !== 'undefined') {
+        fetch('/api/calendar/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target: 'settings',
+            data: {
+              id: 'global_settings',
+              domain: settings.domain,
+              domain_wide_sync: settings.domainWideSync,
+              auto_sync_interval_minutes: settings.autoSyncIntervalMinutes,
+              sync_crm_diagnosticos: settings.syncCrmDiagnosticos,
+              webhook_url: settings.webhookUrl,
+              google_client_id: settings.googleClientId,
+              service_account_configured: settings.serviceAccountConfigured,
+              last_global_sync_at: new Date().toISOString(),
+            },
+          }),
+        }).catch(() => {
+          // Ignora erro
+        });
+      }
     } catch {
       // Ignora erro
     }

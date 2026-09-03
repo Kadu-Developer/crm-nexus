@@ -20,8 +20,11 @@ import {
   Plus,
   Edit3,
   Save,
-  Check,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/lib/supabase/auth-context';
+import { crmService } from '@/lib/supabase/crm-service';
 
 interface LeadDetailModalProps {
   opportunity: Opportunity | null;
@@ -29,6 +32,7 @@ interface LeadDetailModalProps {
   onClose: () => void;
   onAddActivity: (oppId: string, activity: Activity) => void;
   onUpdateQualification?: (oppId: string, qualification: Partial<Qualification>) => void;
+  onDeleteOpportunity?: (oppId: string) => Promise<void> | void;
 }
 
 export function LeadDetailModal({
@@ -37,7 +41,13 @@ export function LeadDetailModal({
   onClose,
   onAddActivity,
   onUpdateQualification,
+  onDeleteOpportunity,
 }: LeadDetailModalProps) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
+  const isOwner = profile?.id && opportunity?.consultantId ? profile.id === opportunity.consultantId : false;
+  const canDelete = isAdmin || isOwner;
+  const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'visao_geral' | 'diagnostico' | 'financeiro' | 'timeline'>('visao_geral');
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [isEditingQual, setIsEditingQual] = useState(false);
@@ -66,21 +76,23 @@ export function LeadDetailModal({
 
   useEffect(() => {
     if (opportunity?.qualification) {
-      setQualForm({
-        mainProblem: opportunity.qualification.mainProblem || '',
-        impactedArea: opportunity.qualification.impactedArea || '',
-        currentWorkflow: opportunity.qualification.currentWorkflow || '',
-        currentSystems: opportunity.qualification.currentSystems || '',
-        usesSpreadsheetsManual: Boolean(opportunity.qualification.usesSpreadsheetsManual),
-        hasUnintegratedSystems: Boolean(opportunity.qualification.hasUnintegratedSystems),
-        mainBottleneck: opportunity.qualification.mainBottleneck || '',
-        estimatedImpactCost: opportunity.qualification.estimatedImpactCost || '',
-        hasBudget: opportunity.qualification.hasBudget || 'desconhecido',
-        urgencyLevel: opportunity.qualification.urgencyLevel || 'media',
-        desiredTimeline: opportunity.qualification.desiredTimeline || '',
-        competitorSupplier: opportunity.qualification.competitorSupplier || '',
-        opportunityPotential: opportunity.qualification.opportunityPotential || 'medio',
-        consultantNotes: opportunity.qualification.consultantNotes || '',
+      queueMicrotask(() => {
+        setQualForm({
+          mainProblem: opportunity.qualification.mainProblem || '',
+          impactedArea: opportunity.qualification.impactedArea || '',
+          currentWorkflow: opportunity.qualification.currentWorkflow || '',
+          currentSystems: opportunity.qualification.currentSystems || '',
+          usesSpreadsheetsManual: Boolean(opportunity.qualification.usesSpreadsheetsManual),
+          hasUnintegratedSystems: Boolean(opportunity.qualification.hasUnintegratedSystems),
+          mainBottleneck: opportunity.qualification.mainBottleneck || '',
+          estimatedImpactCost: opportunity.qualification.estimatedImpactCost || '',
+          hasBudget: opportunity.qualification.hasBudget || 'desconhecido',
+          urgencyLevel: opportunity.qualification.urgencyLevel || 'media',
+          desiredTimeline: opportunity.qualification.desiredTimeline || '',
+          competitorSupplier: opportunity.qualification.competitorSupplier || '',
+          opportunityPotential: opportunity.qualification.opportunityPotential || 'medio',
+          consultantNotes: opportunity.qualification.consultantNotes || '',
+        });
       });
     }
   }, [opportunity]);
@@ -120,6 +132,35 @@ export function LeadDetailModal({
     });
   };
 
+  const handleDelete = async () => {
+    if (!opportunity) return;
+    const oppName = opportunity.tradeName || opportunity.companyName;
+    if (!window.confirm(`Tem certeza que deseja excluir a oportunidade "${oppName}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    const toastId = toast.loading(`Excluindo oportunidade "${oppName}"...`);
+    try {
+      if (onDeleteOpportunity) {
+        await onDeleteOpportunity(opportunity.id);
+      } else {
+        const res = await crmService.deleteOpportunity(opportunity.id, opportunity.companyId);
+        if (!res.success) {
+          throw new Error(res.error || 'Falha ao excluir');
+        }
+      }
+      toast.success(`Oportunidade "${oppName}" excluída com sucesso!`, { id: toastId });
+      onClose();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Tente novamente';
+      console.error('Erro ao excluir oportunidade:', err);
+      toast.error(`Erro ao excluir: ${message}`, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-slate-900 border-l border-slate-800 w-full max-w-3xl h-full shadow-2xl flex flex-col overflow-hidden text-slate-200 animate-in slide-in-from-right duration-200">
@@ -132,10 +173,10 @@ export function LeadDetailModal({
                   {opportunity.tradeName || opportunity.companyName}
                 </h2>
                 <div
-                  className={`flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-md ${
-                    opportunity.score >= 80
+                  className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    opportunity.score >= 70
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : opportunity.score >= 50
+                      : opportunity.score >= 40
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                       : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                   }`}
@@ -149,12 +190,26 @@ export function LeadDetailModal({
                 {opportunity.companyName} • {opportunity.city}/{opportunity.state} • Responsável: <strong className="text-slate-300">{opportunity.consultantName}</strong>
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {canDelete && (
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                  className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition disabled:opacity-50 cursor-pointer"
+                  title="Excluir Oportunidade / Lead"
+                >
+                  <Trash2 className={`w-5 h-5 ${isDeleting ? 'animate-pulse opacity-50' : ''}`} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Banner de Próxima Ação no Topo */}

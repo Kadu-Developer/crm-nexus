@@ -4,7 +4,7 @@ const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const redirectPath = searchParams.get('redirect') || '/';
+  const redirectPath = searchParams.get('redirect') || '/?view=calendar';
   const collaboratorId = searchParams.get('collaboratorId') || '';
 
   const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;

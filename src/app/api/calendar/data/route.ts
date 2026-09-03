@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
             .from('calendar_events')
             .select('*')
             .order('start_time', { ascending: true })
-            .limit(500)
+            .limit(5000)
         : Promise.resolve({ data: [], error: null }),
       fetchSettings
         ? supabaseAdmin
@@ -62,5 +62,66 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'Erro ao carregar dados do calendário', message: err.message },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const target = request.nextUrl.searchParams.get('target') || 'events';
+
+    if (target === 'events') {
+      const { error } = await supabaseAdmin
+        .from('calendar_events')
+        .delete()
+        .neq('id', '____dummy_never_matches____');
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Base de dados de eventos limpa com sucesso.',
+      });
+    }
+
+    return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { target, data } = body;
+
+    if (target === 'collaborators' && Array.isArray(data)) {
+      const { error } = await supabaseAdmin
+        .from('calendar_collaborators')
+        .upsert(data, { onConflict: 'id' });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, count: data.length });
+    }
+
+    if (target === 'settings' && data) {
+      const { error } = await supabaseAdmin
+        .from('calendar_settings')
+        .upsert(data, { onConflict: 'id' });
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

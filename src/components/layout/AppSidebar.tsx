@@ -22,7 +22,7 @@ export default function AppSidebar({ currentView }: AppSidebarProps) {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-14 flex-col items-center border-r border-[#0b3d8f] bg-[#052D72] pt-20 md:flex">
       <div className="flex flex-col items-center gap-2">
-        <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={30} className="mb-2 h-8 w-7 object-contain" />
+        <Image src="/nexus-shield-cropped.png" alt="Nexus Flow" width={28} height={32} style={{ width: 'auto', height: 'auto' }} className="mb-2 object-contain" priority />
         <button
           type="button"
           onClick={() => router.push('/dashboard')}

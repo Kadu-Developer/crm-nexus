@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
+import { FALLBACK_CATEGORY } from '@/lib/calendar-mock-data';
 import { Video, Repeat, Sparkles, Flame, Clock } from 'lucide-react';
 
 interface CalendarDayGridProps {
@@ -42,8 +43,9 @@ export function CalendarDayGrid({
     );
   });
 
-  const getCategoryInfo = (catId: string) => {
-    return categories.find((c) => c.id === catId) || categories[0];
+  const getCategoryInfo = (catId?: string) => {
+    if (!catId) return categories[0] || FALLBACK_CATEGORY;
+    return categories.find((c) => c.id === catId) || categories[0] || FALLBACK_CATEGORY;
   };
 
   // Colaboradores visíveis (se nenhum estiver selecionado, exibir todos)

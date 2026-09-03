@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { GoogleIntegrationSettings, CollaboratorAccount } from '@/types/calendar';
-import { X, RefreshCw, CheckCircle2, ShieldCheck, Key, Globe, Radio, Bell, ExternalLink, Zap, Users, UserPlus, LogIn } from 'lucide-react';
+import { X, RefreshCw, CheckCircle2, ShieldCheck, Key, Globe, Radio, Bell, ExternalLink, Zap, Users, UserPlus, LogIn, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { openGoogleOAuthPopup } from '@/lib/google-auth';
+import { calendarService } from '@/lib/supabase/calendar-service';
 
 interface GoogleSyncSettingsModalProps {
   isOpen: boolean;
@@ -13,6 +15,7 @@ interface GoogleSyncSettingsModalProps {
   accounts: CollaboratorAccount[];
   onSyncGoogle: () => void;
   isSyncing: boolean;
+  onClearEvents?: () => void;
 }
 
 export function GoogleSyncSettingsModal({
@@ -23,23 +26,46 @@ export function GoogleSyncSettingsModal({
   accounts,
   onSyncGoogle,
   isSyncing,
+  onClearEvents,
 }: GoogleSyncSettingsModalProps) {
   const [formData, setFormData] = useState<GoogleIntegrationSettings>(settings);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     setFormData(settings);
   }, [settings, isOpen]);
+
+  const handleClearEvents = async () => {
+    if (!confirm('Deseja realmente limpar TODOS os eventos da base de dados do calendário? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    setIsClearing(true);
+    try {
+      const res = await calendarService.clearAllEvents();
+      if (res.success) {
+        toast.success('Base de dados de eventos limpa com sucesso!');
+        if (onClearEvents) onClearEvents();
+        onClose();
+      } else {
+        toast.error('Erro ao limpar base de eventos');
+      }
+    } catch {
+      toast.error('Erro de conexão ao limpar base de eventos');
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   const handleStartGoogleOAuth = async () => {
     setIsAuthorizing(true);
     try {
-      const res = await fetch('/api/calendar/auth');
+      const res = await fetch('/api/calendar/auth?redirect=/?view=calendar');
       const data = await res.json();
       if (data.authUrl) {
-        window.open(data.authUrl, '_blank');
+        openGoogleOAuthPopup(data.authUrl);
       } else {
         toast.info('Para conectar diretamente, informe o Client ID e Secret abaixo ou adicione ao .env.local.');
       }
@@ -162,6 +188,17 @@ export function GoogleSyncSettingsModal({
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Buscando eventos na API do Google...' : 'Sincronizar Todas as Agendas Agora'}</span>
+            </button>
+
+            {/* Botão de Limpar Base de Eventos */}
+            <button
+              type="button"
+              onClick={handleClearEvents}
+              disabled={isClearing}
+              className="w-full py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-bold flex items-center justify-center gap-2 border border-red-500/20 transition cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{isClearing ? 'Limpando base de dados...' : 'Limpar Todos os Eventos da Base'}</span>
             </button>
           </div>
 

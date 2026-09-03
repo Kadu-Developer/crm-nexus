@@ -125,6 +125,7 @@ export interface Activity {
 
 export interface Opportunity {
   id: string;
+  companyId?: string;
   companyName: string;
   tradeName: string;
   cnpj?: string;
