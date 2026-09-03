@@ -470,20 +470,31 @@ class CalendarService {
     return true;
   }
 
-  // 6. Limpar todos os eventos da base de dados e do cache
-  public async clearAllEvents(options?: { disconnectGoogle?: boolean }): Promise<{ success: boolean; message?: string }> {
+  // 6. Limpar eventos da base de dados e do cache
+  public async clearAllEvents(options?: { disconnectGoogle?: boolean; collaboratorId?: string }): Promise<{ success: boolean; message?: string }> {
     const disconnectParam = options?.disconnectGoogle ? '&disconnect=true' : '';
+    const collabParam = options?.collaboratorId ? `&collaboratorId=${encodeURIComponent(options.collaboratorId)}` : '';
     try {
-      const res = await fetch(`/api/calendar/data?target=events${disconnectParam}`, { method: 'DELETE' });
+      const res = await fetch(`/api/calendar/data?target=events${disconnectParam}${collabParam}`, { method: 'DELETE' });
       if (res.ok) {
-        this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+        if (options?.collaboratorId) {
+          const currentEvents = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
+          const filtered = currentEvents.filter(
+            (e) => e.collaboratorId !== options.collaboratorId && e.ctoId !== options.collaboratorId
+          );
+          this.setStorageItem(STORAGE_KEYS.EVENTS, filtered);
+        } else {
+          this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+        }
+
         if (options?.disconnectGoogle) {
           const collabs = await this.getCollaborators();
-          const reset = collabs.map((c) => ({
-            ...c,
-            googleConnected: false,
-            syncStatus: 'disconnected' as const,
-          }));
+          const reset = collabs.map((c) => {
+            if (!options?.collaboratorId || c.id === options.collaboratorId) {
+              return { ...c, googleConnected: false, syncStatus: 'disconnected' as const };
+            }
+            return c;
+          });
           this.setStorageItem(STORAGE_KEYS.COLLABORATORS, reset);
         }
         return { success: true, message: 'Base de eventos limpa com sucesso.' };
@@ -492,7 +503,15 @@ class CalendarService {
       // Ignora erro
     }
 
-    this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+    if (options?.collaboratorId) {
+      const currentEvents = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
+      const filtered = currentEvents.filter(
+        (e) => e.collaboratorId !== options.collaboratorId && e.ctoId !== options.collaboratorId
+      );
+      this.setStorageItem(STORAGE_KEYS.EVENTS, filtered);
+    } else {
+      this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+    }
     return { success: true, message: 'Base de eventos limpa com sucesso.' };
   }
 
@@ -624,6 +643,14 @@ class CalendarService {
         return c;
       });
       this.setStorageItem(STORAGE_KEYS.COLLABORATORS, updated);
+
+      // Remove imediatamente os eventos deste colaborador do cache local
+      const currentEvents = this.getStorageItem<CalendarEvent[]>(STORAGE_KEYS.EVENTS, []);
+      const filteredEvents = currentEvents.filter(
+        (e) => e.collaboratorId !== collaboratorId && e.ctoId !== collaboratorId
+      );
+      this.setStorageItem(STORAGE_KEYS.EVENTS, filteredEvents);
+
       return true;
     } catch {
       return false;

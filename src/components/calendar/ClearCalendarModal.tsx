@@ -10,6 +10,7 @@ interface ClearCalendarModalProps {
   onClose: () => void;
   onSuccess: () => void;
   totalEvents: number;
+  currentCollaboratorId?: string | null;
 }
 
 export function ClearCalendarModal({
@@ -17,6 +18,7 @@ export function ClearCalendarModal({
   onClose,
   onSuccess,
   totalEvents,
+  currentCollaboratorId,
 }: ClearCalendarModalProps) {
   const [disconnectGoogle, setDisconnectGoogle] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -26,7 +28,10 @@ export function ClearCalendarModal({
   const handleClear = async () => {
     setIsClearing(true);
     try {
-      const res = await calendarService.clearAllEvents({ disconnectGoogle });
+      const res = await calendarService.clearAllEvents({
+        disconnectGoogle,
+        collaboratorId: currentCollaboratorId || undefined,
+      });
       if (res.success) {
         toast.success(
           disconnectGoogle

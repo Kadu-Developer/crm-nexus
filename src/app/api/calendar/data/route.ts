@@ -71,25 +71,39 @@ export async function DELETE(request: NextRequest) {
 
     if (target === 'events') {
       const disconnect = request.nextUrl.searchParams.get('disconnect') === 'true';
+      const collaboratorId = request.nextUrl.searchParams.get('collaboratorId');
 
-      const { error } = await supabaseAdmin
-        .from('calendar_events')
-        .delete()
-        .neq('id', '____dummy_never_matches____');
+      let query = supabaseAdmin.from('calendar_events').delete();
+      if (collaboratorId) {
+        query = query.eq('collaborator_id', collaboratorId);
+      } else {
+        query = query.neq('id', '____dummy_never_matches____');
+      }
 
+      const { error } = await query;
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
       if (disconnect) {
-        // Limpa tokens salvos no banco para desconectar a conta
-        await supabaseAdmin.from('calendar_collaborators').update({
-          google_access_token: null,
-          google_refresh_token: null,
-          google_token_expiry: null,
-          google_connected: false,
-          sync_status: 'disconnected',
-        }).neq('id', '____');
+        if (collaboratorId) {
+          await supabaseAdmin.from('calendar_collaborators').update({
+            google_access_token: null,
+            google_refresh_token: null,
+            google_token_expiry: null,
+            google_connected: false,
+            sync_status: 'disconnected',
+          }).eq('id', collaboratorId);
+        } else {
+          // Limpa tokens salvos no banco para desconectar todas as contas
+          await supabaseAdmin.from('calendar_collaborators').update({
+            google_access_token: null,
+            google_refresh_token: null,
+            google_token_expiry: null,
+            google_connected: false,
+            sync_status: 'disconnected',
+          }).neq('id', '____');
+        }
       }
 
       const res = NextResponse.json({
@@ -112,7 +126,8 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'collaboratorId é obrigatório' }, { status: 400 });
       }
 
-      const { error } = await supabaseAdmin.from('calendar_collaborators').update({
+      // 1. Reseta os tokens do colaborador
+      const { error: updateError } = await supabaseAdmin.from('calendar_collaborators').update({
         google_access_token: null,
         google_refresh_token: null,
         google_token_expiry: null,
@@ -120,11 +135,30 @@ export async function DELETE(request: NextRequest) {
         sync_status: 'disconnected',
       }).eq('id', collaboratorId);
 
-      if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      if (updateError) {
+        return NextResponse.json({ success: false, error: updateError.message }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, message: 'Colaborador desconectado com sucesso.' });
+      // 2. Apaga TODOS os eventos deste colaborador no banco de dados para que sumam imediatamente
+      const { error: deleteEventsError } = await supabaseAdmin
+        .from('calendar_events')
+        .delete()
+        .eq('collaborator_id', collaboratorId);
+
+      if (deleteEventsError) {
+        console.warn('Aviso ao apagar eventos do colaborador desconectado:', deleteEventsError.message);
+      }
+
+      const res = NextResponse.json({
+        success: true,
+        message: 'Colaborador desconectado e todos os seus eventos foram apagados da agenda com sucesso.',
+      });
+
+      res.cookies.delete('google_access_token');
+      res.cookies.delete('google_refresh_token');
+      res.cookies.delete('google_token_expiry');
+
+      return res;
     }
 
     return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });

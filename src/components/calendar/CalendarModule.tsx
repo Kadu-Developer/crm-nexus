@@ -247,12 +247,19 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Desconectar conta individual
   const handleDisconnectCollaborator = async (collabId: string) => {
+    // Imediatamente remove os eventos da tela para feedback instantâneo
+    setEvents((prev) => prev.filter((e) => (e.collaboratorId || e.ctoId) !== collabId));
+    setAccounts((prev) =>
+      prev.map((c) => (c.id === collabId ? { ...c, googleConnected: false, syncStatus: 'disconnected' } : c))
+    );
+
     const success = await calendarService.disconnectCollaborator(collabId);
     if (success) {
-      toast.success('Conta Google desconectada com sucesso.');
+      toast.success('Conta Google desconectada e eventos removidos da agenda.');
       await loadData();
     } else {
       toast.error('Falha ao desconectar conta Google.');
+      await loadData();
     }
   };
 
@@ -618,6 +625,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         onClose={() => setIsClearModalOpen(false)}
         onSuccess={loadData}
         totalEvents={events.length}
+        currentCollaboratorId={currentCollaboratorId}
       />
     </div>
   );
