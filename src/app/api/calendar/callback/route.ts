@@ -63,17 +63,28 @@ export async function GET(request: NextRequest) {
 
     const state = stateStr ? JSON.parse(stateStr) : {};
     let collabId = state.collaboratorId || '';
+    let existingCollab: any = null;
 
-    if (!collabId) {
+    if (collabId) {
+      const { data } = await supabaseAdmin
+        .from('calendar_collaborators')
+        .select('*')
+        .eq('id', collabId)
+        .limit(1);
+      if (data && data.length > 0) existingCollab = data[0];
+    }
+
+    if (!existingCollab) {
       // Tenta localizar por e-mail no banco
       const { data: existingCollabs } = await supabaseAdmin
         .from('calendar_collaborators')
-        .select('id, name, role_title, department, avatar, color')
+        .select('*')
         .eq('email', userEmail)
         .limit(1);
 
       if (existingCollabs && existingCollabs.length > 0) {
-        collabId = existingCollabs[0].id;
+        existingCollab = existingCollabs[0];
+        collabId = existingCollab.id;
       } else if (userEmail.includes('marcel')) {
         collabId = 'collab_marcel';
       } else if (userEmail.includes('patrik')) {
@@ -83,21 +94,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 3. Salvar / Atualizar colaborador com Google conectado (DEVE ser antes dos eventos devido à FK)
+    // 3. Salvar / Atualizar estritamente o colaborador selecionado com Google conectado
     const { error: collaboratorError } = await supabaseAdmin.from('calendar_collaborators').upsert({
       id: collabId,
-      name: userName,
+      name: existingCollab?.name || userName,
       email: userEmail,
-      role_title: collabId === 'collab_marcel' ? 'Founder & CEO / CFO' : collabId === 'collab_patrik' ? 'CTO & IA' : 'Tech Lead & Engenharia',
-      department: collabId === 'collab_marcel' ? 'executivo' : 'engenharia',
-      avatar: userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'CR',
-      color: collabId === 'collab_marcel' ? '#f59e0b' : collabId === 'collab_patrik' ? '#8b5cf6' : '#0284c7',
+      role_title: existingCollab?.role_title || (collabId === 'collab_marcel' ? 'Founder & CEO / CFO' : collabId === 'collab_patrik' ? 'CTO & IA' : 'Tech Lead & Engenharia'),
+      department: existingCollab?.department || (collabId === 'collab_marcel' ? 'executivo' : 'engenharia'),
+      avatar: existingCollab?.avatar || userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'CR',
+      color: existingCollab?.color || (collabId === 'collab_marcel' ? '#f59e0b' : collabId === 'collab_patrik' ? '#8b5cf6' : '#0284c7'),
       google_calendar_id: userEmail,
       google_connected: true,
       sync_status: 'synced',
       last_sync_at: new Date().toISOString(),
       google_access_token: access_token,
-      google_refresh_token: refresh_token || null,
+      google_refresh_token: refresh_token || existingCollab?.google_refresh_token || null,
       google_token_expiry: tokenExpiry,
       is_visible: true,
     });
@@ -106,13 +117,12 @@ export async function GET(request: NextRequest) {
       console.error('Erro ao salvar colaborador no Supabase:', collaboratorError.message);
     }
 
-    // 5. Redirecionar imediatamente para o CRM. A sincronização dos eventos é feita
-    //    pelo front-end chamando /api/calendar/sync, evitando segurar a resposta e
-    //    estourar o timeout das funções serverless da Vercel.
+    // 5. Redirecionar imediatamente para o CRM com o ID do colaborador conectado
     const redirectPath = state.redirectPath || '/?view=calendar';
 
     const redirectUrl = new URL(redirectPath, origin);
     redirectUrl.searchParams.set('google_connected', 'true');
+    redirectUrl.searchParams.set('connected_collab_id', collabId);
     redirectUrl.searchParams.set('email', userEmail);
     redirectUrl.searchParams.set('view', 'calendar');
 

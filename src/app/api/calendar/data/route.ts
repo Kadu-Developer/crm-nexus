@@ -106,6 +106,27 @@ export async function DELETE(request: NextRequest) {
       return res;
     }
 
+    if (target === 'disconnect_collaborator') {
+      const collaboratorId = request.nextUrl.searchParams.get('collaboratorId');
+      if (!collaboratorId) {
+        return NextResponse.json({ success: false, error: 'collaboratorId é obrigatório' }, { status: 400 });
+      }
+
+      const { error } = await supabaseAdmin.from('calendar_collaborators').update({
+        google_access_token: null,
+        google_refresh_token: null,
+        google_token_expiry: null,
+        google_connected: false,
+        sync_status: 'disconnected',
+      }).eq('id', collaboratorId);
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Colaborador desconectado com sucesso.' });
+    }
+
     return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

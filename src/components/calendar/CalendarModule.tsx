@@ -27,6 +27,7 @@ import { ClearCalendarModal } from './ClearCalendarModal';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Plus } from 'lucide-react';
+import { openGoogleOAuthPopup } from '@/lib/google-auth';
 
 interface CalendarModuleProps {
   opportunities?: Opportunity[];
@@ -180,6 +181,32 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     await calendarService.deleteEvent(eventId);
     await loadData();
     toast.info('Evento removido da agenda.');
+  };
+
+  // Conectar Google individual por conta
+  const handleConnectCollaborator = async (collabId: string, email: string) => {
+    try {
+      const res = await fetch(
+        `/api/calendar/auth?collaboratorId=${encodeURIComponent(collabId)}&email=${encodeURIComponent(email)}&redirect=/?view=calendar`
+      );
+      const data = await res.json();
+      if (data.authUrl) {
+        openGoogleOAuthPopup(data.authUrl);
+      }
+    } catch {
+      toast.error('Erro ao iniciar conexão com o Google');
+    }
+  };
+
+  // Desconectar conta individual
+  const handleDisconnectCollaborator = async (collabId: string) => {
+    const success = await calendarService.disconnectCollaborator(collabId);
+    if (success) {
+      toast.success('Conta Google desconectada com sucesso.');
+      await loadData();
+    } else {
+      toast.error('Falha ao desconectar conta Google.');
+    }
   };
 
   // Salvar configurações do Google
@@ -357,6 +384,8 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onSyncGoogle={handleSyncGoogle}
           isSyncing={isSyncing}
           onOpenClearModal={() => setIsClearModalOpen(true)}
+          onConnectAccount={handleConnectCollaborator}
+          onDisconnectAccount={handleDisconnectCollaborator}
         />
 
         {/* Área Central (Semana, Dia, Mês ou Lista) */}
@@ -527,6 +556,8 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onSyncGoogle={handleSyncGoogle}
           isSyncing={isSyncing}
           onClearEvents={loadData}
+          onConnectAccount={handleConnectCollaborator}
+          onDisconnectAccount={handleDisconnectCollaborator}
         />
       )}
 

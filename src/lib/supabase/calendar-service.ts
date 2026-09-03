@@ -550,24 +550,30 @@ class CalendarService {
     }
   }
 
-  // 9. Sincronizar com Google Calendar API Real
-  public async syncWithGoogle(): Promise<{ success: boolean; syncedCount: number; timestamp: string }> {
+  // 9. Sincronizar com Google Calendar API Real (por colaborador ou geral)
+  public async syncWithGoogle(collaboratorId?: string): Promise<{ success: boolean; syncedCount: number; timestamp: string }> {
     const now = new Date().toISOString();
 
     const collaborators = await this.getCollaborators();
-    const updated = collaborators.map((acc) => ({
-      ...acc,
-      googleConnected: true,
-      syncStatus: 'synced' as const,
-      lastSyncAt: now,
-    }));
+    const updated = collaborators.map((acc) => {
+      if (collaboratorId) {
+        if (acc.id === collaboratorId) {
+          return { ...acc, googleConnected: true, syncStatus: 'synced' as const, lastSyncAt: now };
+        }
+        return acc;
+      }
+      if (acc.googleConnected) {
+        return { ...acc, syncStatus: 'synced' as const, lastSyncAt: now };
+      }
+      return acc;
+    });
     await this.saveCollaborators(updated);
 
     try {
       const syncRes = await fetch('/api/calendar/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(collaboratorId ? { collaboratorId } : {}),
       });
 
       if (syncRes.ok) {
@@ -600,6 +606,28 @@ class CalendarService {
       syncedCount: events.length,
       timestamp: now,
     };
+  }
+
+  // 9.1 Desconectar um colaborador individual
+  public async disconnectCollaborator(collaboratorId: string): Promise<boolean> {
+    try {
+      if (typeof window !== 'undefined') {
+        await fetch(`/api/calendar/data?target=disconnect_collaborator&collaboratorId=${encodeURIComponent(collaboratorId)}`, {
+          method: 'DELETE',
+        });
+      }
+      const collaborators = await this.getCollaborators();
+      const updated = collaborators.map((c) => {
+        if (c.id === collaboratorId) {
+          return { ...c, googleConnected: false, syncStatus: 'disconnected' as const };
+        }
+        return c;
+      });
+      this.setStorageItem(STORAGE_KEYS.COLLABORATORS, updated);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // 10. Localizador de Horários Livres

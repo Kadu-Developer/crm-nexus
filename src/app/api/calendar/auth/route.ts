@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const redirectPath = searchParams.get('redirect') || '/?view=calendar';
   const collaboratorId = searchParams.get('collaboratorId') || '';
+  const loginHint = searchParams.get('login_hint') || searchParams.get('email') || '';
 
   const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
 
   const state = JSON.stringify({ redirectPath, collaboratorId, timestamp: Date.now() });
 
-  const authUrl = `${GOOGLE_AUTH_ENDPOINT}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
+  let authUrl = `${GOOGLE_AUTH_ENDPOINT}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
+  if (loginHint) {
+    authUrl += `&login_hint=${encodeURIComponent(loginHint)}`;
+  }
 
   return NextResponse.json({ authUrl, redirectUri });
 }

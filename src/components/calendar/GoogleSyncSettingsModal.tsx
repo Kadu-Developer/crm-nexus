@@ -16,6 +16,8 @@ interface GoogleSyncSettingsModalProps {
   onSyncGoogle: () => void;
   isSyncing: boolean;
   onClearEvents?: () => void;
+  onConnectAccount?: (collaboratorId: string, email: string) => void;
+  onDisconnectAccount?: (collaboratorId: string) => void;
 }
 
 export function GoogleSyncSettingsModal({
@@ -27,6 +29,8 @@ export function GoogleSyncSettingsModal({
   onSyncGoogle,
   isSyncing,
   onClearEvents,
+  onConnectAccount,
+  onDisconnectAccount,
 }: GoogleSyncSettingsModalProps) {
   const [formData, setFormData] = useState<GoogleIntegrationSettings>(settings);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
@@ -117,64 +121,83 @@ export function GoogleSyncSettingsModal({
 
         {/* Formulário e Status */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
-          {/* Ação de Conexão Rápida OAuth */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-cyan-500/10 border border-blue-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div>
-              <p className="font-bold text-slate-900 dark:text-white text-xs">
-                Conectar Conta Google via OAuth 2.0 Oficial
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Autorize o CRM Nexus a ler e sincronizar eventos com sua conta Google.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleStartGoogleOAuth}
-              disabled={isAuthorizing}
-              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shrink-0 shadow-sm shadow-blue-500/30 transition cursor-pointer"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{isAuthorizing ? 'Redirecionando...' : 'Autorizar Google'}</span>
-            </button>
-          </div>
-
-          {/* Status das Contas */}
-          <div className="space-y-2">
+          {/* Status e Conexão Individual das Contas */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                Colaboradores Ativos ({accounts.length})
+                Colaboradores e Conexões Google ({accounts.filter(a => a.googleConnected).length}/{accounts.length} conectados)
               </span>
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Domínio: {formData.domain}
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Conexão individual por conta
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
               {accounts.map((acc) => (
                 <div
                   key={acc.id}
-                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 space-y-0.5"
+                  className={`p-3 rounded-xl border transition flex flex-col justify-between gap-2.5 ${
+                    acc.googleConnected
+                      ? 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div
-                        className="w-4 h-4 rounded-full text-white flex items-center justify-center text-[7px] font-black shrink-0"
-                        style={{ backgroundColor: acc.color }}
-                      >
-                        {acc.avatar}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div
+                          className="w-5 h-5 rounded-full text-white flex items-center justify-center text-[8px] font-black shrink-0"
+                          style={{ backgroundColor: acc.color }}
+                        >
+                          {acc.avatar}
+                        </div>
+                        <p className="font-bold text-slate-900 dark:text-white truncate text-xs">
+                          {acc.name}
+                        </p>
                       </div>
-                      <p className="font-bold text-slate-900 dark:text-white truncate text-[11px]">
-                        {acc.name}
-                      </p>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          acc.googleConnected
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        {acc.googleConnected ? 'Conectado' : 'Desconectado'}
+                      </span>
                     </div>
-                    <div
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: acc.syncStatus === 'synced' ? '#10b981' : '#f59e0b' }}
-                      title="Sincronizado"
-                    />
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{acc.email}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{acc.roleTitle}</p>
                   </div>
-                  <p className="text-[9px] text-slate-400 font-mono truncate">{acc.email}</p>
+
+                  <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5">
+                    {acc.googleConnected ? (
+                      onDisconnectAccount && (
+                        <button
+                          type="button"
+                          onClick={() => onDisconnectAccount(acc.id)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 transition cursor-pointer"
+                        >
+                          Desconectar
+                        </button>
+                      )
+                    ) : (
+                      onConnectAccount && (
+                        <button
+                          type="button"
+                          onClick={() => onConnectAccount(acc.id, acc.email)}
+                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 shadow-xs transition cursor-pointer active:scale-95"
+                        >
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24">
+                            <path fill="#ffffff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#ffffff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#ffffff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#ffffff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                          </svg>
+                          <span>Conectar</span>
+                        </button>
+                      )
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

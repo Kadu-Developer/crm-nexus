@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { CalendarMiniPicker } from './CalendarMiniPicker';
 import { CollaboratorAccount, CalendarCategory, Department } from '@/types/calendar';
-import { Search, Settings, Plus, Check, RefreshCw, Layers, Users, UserPlus, CheckCheck, Square, Trash2 } from 'lucide-react';
+import { Search, Settings, Plus, Check, RefreshCw, Layers, Users, UserPlus, CheckCheck, Square, Trash2, LogOut } from 'lucide-react';
 import { openGoogleOAuthPopup } from '@/lib/google-auth';
 
 interface CalendarLeftSidebarProps {
@@ -21,6 +21,8 @@ interface CalendarLeftSidebarProps {
   onSyncGoogle: () => void;
   isSyncing: boolean;
   onOpenClearModal?: () => void;
+  onConnectAccount?: (collaboratorId: string, email: string) => void;
+  onDisconnectAccount?: (collaboratorId: string) => void;
 }
 
 export function CalendarLeftSidebar({
@@ -38,6 +40,8 @@ export function CalendarLeftSidebar({
   onSyncGoogle,
   isSyncing,
   onOpenClearModal,
+  onConnectAccount,
+  onDisconnectAccount,
 }: CalendarLeftSidebarProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>('all');
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
@@ -77,40 +81,15 @@ export function CalendarLeftSidebar({
 
       {/* Seção: Colaboradores da Empresa (Google Workspace) */}
       <div className="space-y-2">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Colaboradores ({visibleAccountsCount}/{accounts.length})
             </span>
+            <span className="text-[10px] text-slate-400 font-medium">
+              Conexão individual
+            </span>
           </div>
-
-          {/* Botão Único: Conectar / Logar Google Agenda */}
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                const res = await fetch('/api/calendar/auth?redirect=/?view=calendar');
-                const data = await res.json();
-                if (data.authUrl) {
-                  openGoogleOAuthPopup(data.authUrl);
-                }
-              } catch {
-                onOpenGoogleSettings();
-              }
-            }}
-            className="w-full py-2 px-2.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-gradient-to-r from-blue-50 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/30 hover:border-blue-400 dark:hover:border-blue-600 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between transition cursor-pointer shadow-xs group"
-          >
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              <span className="text-[11px] group-hover:text-blue-600 dark:group-hover:text-cyan-400">Conectar Google Agenda</span>
-            </div>
-            <span className="text-[10px] text-blue-600 dark:text-cyan-400 font-bold">OAuth ➔</span>
-          </button>
         </div>
 
         {/* Filtro de Departamentos */}
@@ -212,14 +191,6 @@ export function CalendarLeftSidebar({
                     <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                       {acc.name}
                     </p>
-                    <span className="text-[10px] shrink-0" title="Google Workspace Conectado">
-                      <svg className="w-2.5 h-2.5 inline" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                      </svg>
-                    </span>
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                     {acc.roleTitle}
@@ -227,14 +198,47 @@ export function CalendarLeftSidebar({
                 </div>
               </div>
 
-              {/* Status Dot */}
-              <div
-                className="w-1.5 h-1.5 rounded-full shrink-0 ml-1"
-                style={{
-                  backgroundColor: acc.syncStatus === 'synced' ? '#10b981' : '#f59e0b',
-                }}
-                title={`Status: ${acc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendente'}`}
-              />
+              {/* Status / Ação Individual de Conexão Google */}
+              <div className="shrink-0 ml-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                {acc.googleConnected ? (
+                  <div className="flex items-center gap-1">
+                    <span
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                      title={`Google conectado (${acc.email})`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Google
+                    </span>
+                    {onDisconnectAccount && (
+                      <button
+                        type="button"
+                        onClick={() => onDisconnectAccount(acc.id)}
+                        className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                        title={`Desconectar Google Agenda de ${acc.name}`}
+                      >
+                        <LogOut className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  onConnectAccount && (
+                    <button
+                      type="button"
+                      onClick={() => onConnectAccount(acc.id, acc.email)}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition cursor-pointer"
+                      title={`Conectar Google Agenda de ${acc.name}`}
+                    >
+                      <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                      <span>Conectar</span>
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           ))}
         </div>
