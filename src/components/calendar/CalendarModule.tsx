@@ -23,6 +23,7 @@ import { EventModal } from './EventModal';
 import { EventDetailModal } from './EventDetailModal';
 import { GoogleSyncSettingsModal } from './GoogleSyncSettingsModal';
 import { AddCollaboratorModal } from './AddCollaboratorModal';
+import { ClearCalendarModal } from './ClearCalendarModal';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { Plus } from 'lucide-react';
@@ -49,6 +50,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isAddCollaboratorOpen, setIsAddCollaboratorOpen] = useState(false);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<Partial<CalendarEvent> | null>(null);
@@ -354,6 +356,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onOpenAddCollaborator={() => setIsAddCollaboratorOpen(true)}
           onSyncGoogle={handleSyncGoogle}
           isSyncing={isSyncing}
+          onOpenClearModal={() => setIsClearModalOpen(true)}
         />
 
         {/* Área Central (Semana, Dia, Mês ou Lista) */}
@@ -526,6 +529,13 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onClearEvents={loadData}
         />
       )}
+
+      <ClearCalendarModal
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onSuccess={loadData}
+        totalEvents={events.length}
+      />
     </div>
   );
 }

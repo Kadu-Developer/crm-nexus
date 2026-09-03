@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { CalendarMiniPicker } from './CalendarMiniPicker';
 import { CollaboratorAccount, CalendarCategory, Department } from '@/types/calendar';
-import { Search, Settings, Plus, Check, RefreshCw, Layers, Users, UserPlus, CheckCheck, Square } from 'lucide-react';
+import { Search, Settings, Plus, Check, RefreshCw, Layers, Users, UserPlus, CheckCheck, Square, Trash2 } from 'lucide-react';
 import { openGoogleOAuthPopup } from '@/lib/google-auth';
 
 interface CalendarLeftSidebarProps {
@@ -20,6 +20,7 @@ interface CalendarLeftSidebarProps {
   onOpenAddCollaborator: () => void;
   onSyncGoogle: () => void;
   isSyncing: boolean;
+  onOpenClearModal?: () => void;
 }
 
 export function CalendarLeftSidebar({
@@ -36,6 +37,7 @@ export function CalendarLeftSidebar({
   onOpenAddCollaborator,
   onSyncGoogle,
   isSyncing,
+  onOpenClearModal,
 }: CalendarLeftSidebarProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>('all');
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
@@ -275,6 +277,31 @@ export function CalendarLeftSidebar({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Rodapé de Ações: Ajustes e Limpar Agenda */}
+      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={onOpenGoogleSettings}
+          className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+          title="Configurações e Integração Google"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Ajustes</span>
+        </button>
+
+        {onOpenClearModal && (
+          <button
+            type="button"
+            onClick={onOpenClearModal}
+            className="flex items-center gap-1.5 text-[11px] font-bold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+            title="Apagar todos os eventos da agenda"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Limpar Agenda</span>
+          </button>
+        )}
       </div>
     </aside>
   );

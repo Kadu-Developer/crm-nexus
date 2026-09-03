@@ -70,6 +70,8 @@ export async function DELETE(request: NextRequest) {
     const target = request.nextUrl.searchParams.get('target') || 'events';
 
     if (target === 'events') {
+      const disconnect = request.nextUrl.searchParams.get('disconnect') === 'true';
+
       const { error } = await supabaseAdmin
         .from('calendar_events')
         .delete()
@@ -79,10 +81,29 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({
+      if (disconnect) {
+        // Limpa tokens salvos no banco para desconectar a conta
+        await supabaseAdmin.from('calendar_collaborators').update({
+          google_access_token: null,
+          google_refresh_token: null,
+          google_token_expiry: null,
+          google_connected: false,
+          sync_status: 'disconnected',
+        }).neq('id', '____');
+      }
+
+      const res = NextResponse.json({
         success: true,
         message: 'Base de dados de eventos limpa com sucesso.',
       });
+
+      if (disconnect) {
+        res.cookies.delete('google_access_token');
+        res.cookies.delete('google_refresh_token');
+        res.cookies.delete('google_token_expiry');
+      }
+
+      return res;
     }
 
     return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });

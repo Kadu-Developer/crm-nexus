@@ -471,11 +471,21 @@ class CalendarService {
   }
 
   // 6. Limpar todos os eventos da base de dados e do cache
-  public async clearAllEvents(): Promise<{ success: boolean; message?: string }> {
+  public async clearAllEvents(options?: { disconnectGoogle?: boolean }): Promise<{ success: boolean; message?: string }> {
+    const disconnectParam = options?.disconnectGoogle ? '&disconnect=true' : '';
     try {
-      const res = await fetch('/api/calendar/data?target=events', { method: 'DELETE' });
+      const res = await fetch(`/api/calendar/data?target=events${disconnectParam}`, { method: 'DELETE' });
       if (res.ok) {
         this.setStorageItem(STORAGE_KEYS.EVENTS, []);
+        if (options?.disconnectGoogle) {
+          const collabs = await this.getCollaborators();
+          const reset = collabs.map((c) => ({
+            ...c,
+            googleConnected: false,
+            syncStatus: 'disconnected' as const,
+          }));
+          this.setStorageItem(STORAGE_KEYS.COLLABORATORS, reset);
+        }
         return { success: true, message: 'Base de eventos limpa com sucesso.' };
       }
     } catch {
