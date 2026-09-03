@@ -17,6 +17,7 @@ interface EventModalProps {
   categories: CalendarCategory[];
   opportunities?: Opportunity[];
   isAdmin?: boolean;
+  currentCollaboratorId?: string;
 }
 
 export function EventModal({
@@ -29,17 +30,20 @@ export function EventModal({
   categories,
   opportunities = [],
   isAdmin = false,
+  currentCollaboratorId,
 }: EventModalProps) {
   const { profile } = useAuth();
   const isUserAdmin = isAdmin || profile?.role === 'admin_ceo' || profile?.role === 'admin_tech' || profile?.role?.startsWith('admin');
 
   // Identifica a conta do usuário logado
-  const myAccount = accounts.find(
+  const effectiveCollabId = currentCollaboratorId || accounts.find(
     (a) =>
       a.id === profile?.id ||
       a.email?.toLowerCase() === profile?.email?.toLowerCase() ||
       a.name?.toLowerCase() === profile?.name?.toLowerCase()
-  ) || accounts[0];
+  )?.id || 'collab_carlos';
+
+  const myAccount = accounts.find((a) => a.id === effectiveCollabId) || accounts[0];
 
   const [title, setTitle] = useState('');
   const [collaboratorName, setCollaboratorName] = useState('');
@@ -145,6 +149,12 @@ export function EventModal({
       return;
     }
 
+    // Se for edição, somente o proprietário do evento pode modificar
+    if (initialEvent?.id && initialEvent.collaboratorId && initialEvent.collaboratorId !== effectiveCollabId) {
+      toast.error('Somente o proprietário deste evento pode alterá-lo.');
+      return;
+    }
+
     const [startH, startM] = startTimeStr.split(':').map(Number);
     const [endH, endM] = endTimeStr.split(':').map(Number);
     const [year, month, day] = dateStr.split('-').map(Number);
@@ -170,8 +180,8 @@ export function EventModal({
       id: initialEvent?.id,
       title: finalTitle,
       description: description.trim(),
-      collaboratorId,
-      ctoId: collaboratorId,
+      collaboratorId: initialEvent?.id ? (initialEvent.collaboratorId || effectiveCollabId) : effectiveCollabId,
+      ctoId: initialEvent?.id ? (initialEvent.collaboratorId || effectiveCollabId) : effectiveCollabId,
       additionalCollaboratorIds,
       categoryId,
       startTime: start.toISOString(),
@@ -184,7 +194,7 @@ export function EventModal({
       opportunityScore: selectedOpp?.score,
       stageTitle: selectedOpp?.stage,
       source: initialEvent?.source || 'google_calendar',
-      status: 'confirmed',
+      status: initialEvent?.status || 'confirmed',
     };
 
     onSave(eventPayload);
@@ -238,47 +248,29 @@ export function EventModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-700 dark:text-slate-300">
-                Responsável Principal na Agenda Google *
+                Agenda Principal do Evento *
               </label>
-              {!isUserAdmin && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                  <Lock className="w-3 h-3" /> Exclusivo ADM
-                </span>
-              )}
+              <span className="text-[10px] text-blue-600 dark:text-cyan-400 font-bold flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                <Lock className="w-3 h-3" /> Sua Agenda
+              </span>
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
-              <button
-                type="button"
-                disabled={!isUserAdmin}
-                onClick={() => setCollaboratorId('all_team')}
-                className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
-                  !isUserAdmin ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-                } ${
-                  collaboratorId === 'all_team'
-                    ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold'
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">
-                  ALL
-                </div>
-                <span className="truncate">Toda a Equipe</span>
-              </button>
-
-              {accounts.map((acc) => (
-                <button
-                  key={acc.id}
-                  type="button"
-                  disabled={!isUserAdmin && acc.id !== collaboratorId}
-                  onClick={() => handleCollaboratorChange(acc.id)}
-                  className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
-                    !isUserAdmin && acc.id !== collaboratorId ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-                  } ${
-                    collaboratorId === acc.id
-                      ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold ring-1 ring-blue-500/30'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400'
-                  }`}
-                >
+              {accounts.map((acc) => {
+                const isMine = acc.id === effectiveCollabId;
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    disabled={!isMine}
+                    onClick={() => setCollaboratorId(acc.id)}
+                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
+                      !isMine ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                    } ${
+                      collaboratorId === acc.id
+                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold ring-1 ring-blue-500/30'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black text-white shrink-0"
                     style={{ backgroundColor: acc.color }}
@@ -290,8 +282,9 @@ export function EventModal({
                     <p className="truncate text-[9px] opacity-70">{acc.roleTitle}</p>
                   </div>
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
             {!isUserAdmin && (
               <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
                 ℹ️ O criador do evento é definido automaticamente como responsável principal. Apenas Administradores podem selecionar outro colaborador.

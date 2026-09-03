@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CalendarEvent, CollaboratorAccount, CalendarCategory } from '@/types/calendar';
-import { X, Calendar, Clock, Video, Flame, Users, Repeat, MapPin, Edit3, Trash2, ExternalLink, ArrowRight, UserCheck } from 'lucide-react';
+import { X, Calendar, Clock, Video, Flame, Users, Repeat, MapPin, Edit3, Trash2, ExternalLink, ArrowRight, UserCheck, Lock } from 'lucide-react';
 
 interface EventDetailModalProps {
   event: CalendarEvent | null;
@@ -13,6 +13,7 @@ interface EventDetailModalProps {
   onOpenOpportunity?: (opportunityId: string) => void;
   accounts: CollaboratorAccount[];
   categories: CalendarCategory[];
+  currentCollaboratorId?: string;
 }
 
 export function EventDetailModal({
@@ -24,6 +25,7 @@ export function EventDetailModal({
   onOpenOpportunity,
   accounts,
   categories,
+  currentCollaboratorId,
 }: EventDetailModalProps) {
   if (!isOpen || !event) return null;
 
@@ -266,43 +268,60 @@ export function EventDetailModal({
         </div>
 
         {/* Rodapé de Ações */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('Tem certeza que deseja cancelar e excluir esta reunião?')) {
-                onDelete(event.id);
-                onClose();
-              }
-            }}
-            className="flex items-center gap-1 text-rose-600 dark:text-rose-400 hover:text-rose-700 font-bold px-2 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Excluir</span>
-          </button>
+        {(() => {
+          const isOwner = currentCollaboratorId
+            ? (event.collaboratorId === currentCollaboratorId || event.ctoId === currentCollaboratorId)
+            : true;
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onEdit(event);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs transition cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Editar</span>
-            </button>
+          return (
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+              {isOwner ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Tem certeza que deseja cancelar e excluir esta reunião?')) {
+                      onDelete(event.id);
+                      onClose();
+                    }
+                  }}
+                  className="flex items-center gap-1 text-rose-600 dark:text-rose-400 hover:text-rose-700 font-bold px-2 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer text-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Excluir</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Somente <strong>{collab.name.split(' ')[0]}</strong> pode editar ou excluir</span>
+                </div>
+              )}
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
+              <div className="flex items-center gap-2">
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onEdit(event);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs transition cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Editar</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

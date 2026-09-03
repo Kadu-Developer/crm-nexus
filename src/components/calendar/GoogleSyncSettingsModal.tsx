@@ -18,6 +18,7 @@ interface GoogleSyncSettingsModalProps {
   onClearEvents?: () => void;
   onConnectAccount?: (collaboratorId: string, email: string) => void;
   onDisconnectAccount?: (collaboratorId: string) => void;
+  currentCollaboratorId?: string;
 }
 
 export function GoogleSyncSettingsModal({
@@ -31,6 +32,7 @@ export function GoogleSyncSettingsModal({
   onClearEvents,
   onConnectAccount,
   onDisconnectAccount,
+  currentCollaboratorId,
 }: GoogleSyncSettingsModalProps) {
   const [formData, setFormData] = useState<GoogleIntegrationSettings>(settings);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
@@ -169,19 +171,30 @@ export function GoogleSyncSettingsModal({
                     <p className="text-[10px] text-slate-400 truncate">{acc.roleTitle}</p>
                   </div>
 
-                  <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5">
-                    {acc.googleConnected ? (
-                      onDisconnectAccount && (
-                        <button
-                          type="button"
-                          onClick={() => onDisconnectAccount(acc.id)}
-                          className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 transition cursor-pointer"
-                        >
-                          Desconectar
-                        </button>
-                      )
-                    ) : (
-                      onConnectAccount && (
+                  <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5 min-h-[26px]">
+                    {(() => {
+                      const isOwner = currentCollaboratorId ? acc.id === currentCollaboratorId : true;
+                      if (!isOwner) {
+                        return (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            Apenas {acc.name.split(' ')[0]} pode alterar
+                          </span>
+                        );
+                      }
+
+                      if (acc.googleConnected) {
+                        return onDisconnectAccount ? (
+                          <button
+                            type="button"
+                            onClick={() => onDisconnectAccount(acc.id)}
+                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 transition cursor-pointer"
+                          >
+                            Desconectar
+                          </button>
+                        ) : null;
+                      }
+
+                      return onConnectAccount ? (
                         <button
                           type="button"
                           onClick={() => onConnectAccount(acc.id, acc.email)}
@@ -195,8 +208,8 @@ export function GoogleSyncSettingsModal({
                           </svg>
                           <span>Conectar</span>
                         </button>
-                      )
-                    )}
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ))}

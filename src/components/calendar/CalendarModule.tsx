@@ -35,8 +35,26 @@ interface CalendarModuleProps {
 }
 
 export function CalendarModule({ opportunities = [], onSelectOpportunity }: CalendarModuleProps) {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
+
+  // Identifica a conta de colaborador do usuário logado
+  const currentCollaboratorId = useMemo(() => {
+    const email = (
+      profile?.email ||
+      user?.email ||
+      (typeof window !== 'undefined' ? localStorage.getItem('demoUser') : '') ||
+      ''
+    ).toLowerCase().trim();
+    const name = (profile?.name || user?.name || '').toLowerCase().trim();
+
+    if (email.includes('marcel') || name.includes('marcel')) return 'collab_marcel';
+    if (email.includes('patrik') || email.includes('patrick') || name.includes('patrik')) return 'collab_patrik';
+    if (email.includes('carlos') || email.includes('kadu') || name.includes('carlos') || name.includes('kadu')) return 'collab_carlos';
+
+    return 'collab_carlos';
+  }, [profile, user]);
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,6 +175,18 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Salvar novo evento ou edição
   const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
+    // Se for edição de evento existente, apenas o proprietário pode alterar
+    if (eventData.id) {
+      const existing = events.find((e) => e.id === eventData.id);
+      if (existing) {
+        const ownerId = existing.collaboratorId || existing.ctoId;
+        if (ownerId && ownerId !== currentCollaboratorId) {
+          toast.error('Somente o proprietário deste evento pode alterá-lo.');
+          return;
+        }
+      }
+    }
+
     const selectedAccount = accounts.find((a) => a.id === eventData.collaboratorId);
     const collaboratorName = selectedAccount?.name || '';
 
@@ -178,6 +208,16 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Excluir evento
   const handleDeleteEvent = async (eventId: string) => {
+    // Somente o proprietário pode excluir seu evento
+    const existing = events.find((e) => e.id === eventId);
+    if (existing) {
+      const ownerId = existing.collaboratorId || existing.ctoId;
+      if (ownerId && ownerId !== currentCollaboratorId) {
+        toast.error('Somente o proprietário deste evento pode excluí-lo.');
+        return;
+      }
+    }
+
     await calendarService.deleteEvent(eventId);
     await loadData();
     toast.info('Evento removido da agenda.');
@@ -243,11 +283,12 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     setEditingEvent({
       startTime: selectedDate.toISOString(),
       endTime: new Date(selectedDate.getTime() + 3600000).toISOString(),
+      collaboratorId: currentCollaboratorId,
     });
     setIsEventModalOpen(true);
   };
 
-  const handleCreateSlotEvent = (dateStr: string, hour: number, collaboratorId?: string) => {
+  const handleCreateSlotEvent = (dateStr: string, hour: number) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     const start = new Date(year, month - 1, day, hour, 0, 0, 0);
     const end = new Date(year, month - 1, day, hour + 1, 0, 0, 0);
@@ -255,7 +296,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     setEditingEvent({
       startTime: start.toISOString(),
       endTime: end.toISOString(),
-      collaboratorId: collaboratorId || accounts[0]?.id || 'collab_carlos',
+      collaboratorId: currentCollaboratorId,
     });
     setIsEventModalOpen(true);
   };
@@ -272,8 +313,8 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       title: 'Reunião de Alinhamento / Pré-Diagnóstico',
       startTime: start.toISOString(),
       endTime: end.toISOString(),
-      collaboratorId: slot.availableCollaborators[0] || 'all_team',
-      additionalCollaboratorIds: slot.availableCollaborators.slice(1),
+      collaboratorId: currentCollaboratorId,
+      additionalCollaboratorIds: slot.availableCollaborators.filter((id) => id !== currentCollaboratorId),
       categoryId: 'crm_diagnostico',
     });
     setIsEventModalOpen(true);
@@ -386,6 +427,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onOpenClearModal={() => setIsClearModalOpen(true)}
           onConnectAccount={handleConnectCollaborator}
           onDisconnectAccount={handleDisconnectCollaborator}
+          currentCollaboratorId={currentCollaboratorId}
         />
 
         {/* Área Central (Semana, Dia, Mês ou Lista) */}
@@ -521,6 +563,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         categories={categories}
         opportunities={opportunities}
         isAdmin={isAdmin}
+        currentCollaboratorId={currentCollaboratorId}
       />
 
       <EventDetailModal
@@ -538,6 +581,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
         onOpenOpportunity={handleOpenLeadDetailFromOppId}
         accounts={accounts}
         categories={categories}
+        currentCollaboratorId={currentCollaboratorId}
       />
 
       <AddCollaboratorModal
@@ -558,6 +602,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onClearEvents={loadData}
           onConnectAccount={handleConnectCollaborator}
           onDisconnectAccount={handleDisconnectCollaborator}
+          currentCollaboratorId={currentCollaboratorId}
         />
       )}
 
