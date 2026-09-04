@@ -15,10 +15,12 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Se já está autenticado, vai direto para o painel
+  // Se já está autenticado, vai direto para o painel (sempre na tela inicial Dashboard)
   useEffect(() => {
     if (!isLoading && profile) {
       if (typeof window !== 'undefined') {
+        localStorage.setItem('nexus_current_view', 'dashboard');
+        sessionStorage.setItem('just_logged_in', 'true');
         window.location.href = '/';
       }
     }
@@ -35,6 +37,8 @@ function LoginContent() {
     } else {
       toast.success('Bem-vindo ao CRM Nexus!', { description: 'Sessão iniciada com sucesso.' });
       if (typeof window !== 'undefined') {
+        localStorage.setItem('nexus_current_view', 'dashboard');
+        sessionStorage.setItem('just_logged_in', 'true');
         window.location.href = '/';
       }
     }

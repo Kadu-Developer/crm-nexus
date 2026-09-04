@@ -68,7 +68,8 @@ function AppContent() {
     }
   }, []);
 
-  // Restaura visão anterior salva ou ativa a Agenda se vier de redirecionamento / OAuth
+  // Restaura visão anterior salva ou ativa a Agenda se vier de redirecionamento / OAuth.
+  // Sempre que a pessoa efetua o login, abre sempre como tela inicial o Dashboard.
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -83,12 +84,27 @@ function AppContent() {
         return;
       }
 
+      // Se a pessoa acabou de efetuar o login, sempre abre como tela inicial o Dashboard
+      const justLoggedIn = sessionStorage.getItem('just_logged_in') === 'true';
+      if (justLoggedIn) {
+        sessionStorage.removeItem('just_logged_in');
+        queueMicrotask(() => _setCurrentView('dashboard'));
+        try {
+          localStorage.setItem('nexus_current_view', 'dashboard');
+        } catch {}
+        return;
+      }
+
       try {
         const savedView = localStorage.getItem('nexus_current_view') as ViewMode | null;
         if (savedView && ['kanban', 'dashboard', 'tasks', 'clients', 'calendar', 'suggestions'].includes(savedView)) {
           queueMicrotask(() => _setCurrentView(savedView));
+        } else {
+          queueMicrotask(() => _setCurrentView('dashboard'));
         }
-      } catch {}
+      } catch {
+        queueMicrotask(() => _setCurrentView('dashboard'));
+      }
     }
   }, []);
 

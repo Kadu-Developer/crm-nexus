@@ -105,15 +105,33 @@ export function FloatingLeadCopilotWidget() {
   ]);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Carregar oportunidades
+  // Carregar oportunidades (filtradas pela carteira do consultor ou todas para Admin)
   const loadOpportunities = useCallback(async () => {
     try {
       const data = await crmService.getOpportunities();
-      setOpportunities(data || []);
+      const isAdmin = profile?.role === 'admin_ceo' || profile?.role === 'admin_tech';
+
+      const filtered = (data || []).filter((opp) => {
+        if (isAdmin) return true;
+        if (!opp.consultantId) return false;
+        if (opp.consultantId === profile?.id) return true;
+        const pName = (profile?.name || '').toLowerCase().trim();
+        const cName = (opp.consultantName || '').toLowerCase().trim();
+        if (pName && cName && (cName.includes(pName) || pName.includes(cName))) return true;
+        const pFirst = pName.split(' ')[0];
+        const cFirst = cName.split(' ')[0];
+        if (pFirst && cFirst && pFirst.length > 2 && pFirst === cFirst) return true;
+        return false;
+      });
+
+      setOpportunities(filtered);
+
+      // Se o lead selecionado não está mais na carteira filtrada, limpa seleção
+      setSelectedOppId((prev) => (prev && filtered.some((o) => o.id === prev) ? prev : ''));
     } catch {
       // ignore
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (isOpen) {
@@ -123,25 +141,32 @@ export function FloatingLeadCopilotWidget() {
 
   // Quando seleciona uma oportunidade do CRM
   const handleSelectOpportunity = (oppId: string) => {
-    setSelectedOppId(oppId);
-    if (!oppId) return;
+    if (!oppId) {
+      setSelectedOppId('');
+      return;
+    }
 
     const opp = opportunities.find((o) => o.id === oppId);
-    if (opp) {
-      const primaryContact = opp.contacts?.[0];
-      setCompanyName(opp.companyName || '');
-      setContactName(primaryContact?.name || '');
-      setContactJob(primaryContact?.jobTitle || '');
-      setContactPhone(primaryContact?.phone || '');
-      setSegment(opp.segment || 'industria');
-      setBottleneck(opp.qualification?.mainBottleneck || opp.qualification?.mainProblem || '');
-      setCnpjInput(opp.cnpj || '');
-      toast.info(`Lead "${opp.companyName}" carregado no Copilot!`);
+    if (!opp) {
+      toast.error('Este lead não pertence à sua carteira de clientes.');
+      setSelectedOppId('');
+      return;
+    }
 
-      // Se tiver CNPJ, executa consulta pública automática
-      if (opp.cnpj) {
-        handlePublicConsultation(opp.cnpj, opp.companyName);
-      }
+    setSelectedOppId(oppId);
+    const primaryContact = opp.contacts?.[0];
+    setCompanyName(opp.companyName || '');
+    setContactName(primaryContact?.name || '');
+    setContactJob(primaryContact?.jobTitle || '');
+    setContactPhone(primaryContact?.phone || '');
+    setSegment(opp.segment || 'industria');
+    setBottleneck(opp.qualification?.mainBottleneck || opp.qualification?.mainProblem || '');
+    setCnpjInput(opp.cnpj || '');
+    toast.info(`Lead "${opp.companyName}" carregado no Copilot!`);
+
+    // Se tiver CNPJ, executa consulta pública automática
+    if (opp.cnpj) {
+      handlePublicConsultation(opp.cnpj, opp.companyName);
     }
   };
 
@@ -481,20 +506,29 @@ export function FloatingLeadCopilotWidget() {
                 <Building2 className="w-3.5 h-3.5 text-purple-200 shrink-0" />
                 <select
                   value={selectedOppId}
+                  disabled={opportunities.length === 0}
                   onChange={(e) => handleSelectOpportunity(e.target.value)}
-                  className="w-full bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer [&>option]:text-slate-900 [&>option]:bg-white"
+                  className={`w-full bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer [&>option]:text-slate-900 [&>option]:bg-white ${
+                    opportunities.length === 0 ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                 >
-                  <option value="">✨ Selecionar Lead do CRM (ou consultar CNPJ)...</option>
-                  {opportunities.map((opp) => (
-                    <option key={opp.id} value={opp.id}>
-                      {opp.companyName} — {opp.contacts?.[0]?.name || 'Sem contato'} ({SEGMENT_LABELS[opp.segment] || opp.segment})
-                    </option>
-                  ))}
+                  {opportunities.length === 0 ? (
+                    <option value="">Nenhum lead na sua carteira de clientes</option>
+                  ) : (
+                    <>
+                      <option value="">✨ Selecionar Lead da sua Carteira ({opportunities.length})...</option>
+                      {opportunities.map((opp) => (
+                        <option key={opp.id} value={opp.id}>
+                          {opp.companyName} — {opp.contacts?.[0]?.name || 'Sem contato'} ({SEGMENT_LABELS[opp.segment] || opp.segment})
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
 
               {/* Chips Rápidos de Leads para clicar com 1 toque */}
-              {opportunities.length > 0 && (
+              {opportunities.length > 0 ? (
                 <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
                   <span className="text-[10px] font-bold text-purple-200/70 uppercase tracking-wider shrink-0">Atalhos:</span>
                   {opportunities.slice(0, 6).map((opp) => (
@@ -512,6 +546,12 @@ export function FloatingLeadCopilotWidget() {
                       {opp.companyName}
                     </button>
                   ))}
+                </div>
+              ) : (
+                <div className="mt-2 pt-1.5 border-t border-white/10">
+                  <p className="text-[10px] text-purple-200/70 italic">
+                    Sua carteira está sem leads no momento (0 cadastrados). Você ainda pode pesquisar qualquer empresa pelo CNPJ na aba &quot;Consulta Pública&quot;.
+                  </p>
                 </div>
               )}
             </div>

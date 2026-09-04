@@ -363,6 +363,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(DEMO_USER_KEY);
+      localStorage.setItem('nexus_current_view', 'dashboard');
+      sessionStorage.removeItem('just_logged_in');
     }
     await supabase.auth.signOut();
     setUser(null);
