@@ -182,7 +182,7 @@ function LoginContent() {
                       <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Patrik Rodrigues</p>
                       <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">Admin Tech</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 truncate">CTO & Automação / IA</p>
+                    <p className="text-[10px] text-slate-500 truncate">CTO & IA e Automação</p>
                   </button>
 
                   <button
@@ -194,7 +194,7 @@ function LoginContent() {
                       <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Carlos Eduardo</p>
                       <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">Admin Tech</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 truncate">Tech Lead & Engenharia</p>
+                    <p className="text-[10px] text-slate-500 truncate">Tech Lead Full Stack & IA</p>
                   </button>
                 </div>
               </div>
