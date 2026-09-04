@@ -19,6 +19,7 @@ interface GoogleSyncSettingsModalProps {
   onConnectAccount?: (collaboratorId: string, email: string) => void;
   onDisconnectAccount?: (collaboratorId: string) => void;
   currentCollaboratorId?: string | null;
+  isAdmin?: boolean;
 }
 
 export function GoogleSyncSettingsModal({
@@ -33,6 +34,7 @@ export function GoogleSyncSettingsModal({
   onConnectAccount,
   onDisconnectAccount,
   currentCollaboratorId,
+  isAdmin,
 }: GoogleSyncSettingsModalProps) {
   const [formData, setFormData] = useState<GoogleIntegrationSettings>(settings);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
@@ -174,10 +176,11 @@ export function GoogleSyncSettingsModal({
                   <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5 min-h-[26px]">
                     {(() => {
                       const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
-                      if (!isOwner) {
+                      const canManage = Boolean(isOwner || isAdmin);
+                      if (!canManage) {
                         return (
                           <span className="text-[10px] text-slate-400 font-medium">
-                            Apenas {acc.name.split(' ')[0]} pode alterar
+                            Apenas {acc.name.split(' ')[0]} ou Admin pode alterar
                           </span>
                         );
                       }

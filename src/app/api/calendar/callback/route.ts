@@ -94,12 +94,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const avatar = existingCollab?.avatar || (
+      (userName || 'CR')
+        .split(' ')
+        .map((n: string) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    ) || 'CR';
+
     const { error: collaboratorError } = await supabaseAdmin.from('calendar_collaborators').upsert({
       id: collabId,
       name: existingCollab?.name || userName,
       email: userEmail,
       role_title: existingCollab?.role_title || (collabId === 'collab_marcel' ? 'Founder & CEO / CFO' : collabId === 'collab_patrik' ? 'CTO & Inteligência Artificial e Automação' : 'Tech Lead Full Stack & IA'),
       department: existingCollab?.department || (collabId === 'collab_marcel' ? 'executivo' : 'engenharia'),
+      avatar,
       color: existingCollab?.color || (collabId === 'collab_marcel' ? '#f59e0b' : collabId === 'collab_patrik' ? '#8b5cf6' : '#0284c7'),
       google_calendar_id: userEmail,
       google_connected: true,

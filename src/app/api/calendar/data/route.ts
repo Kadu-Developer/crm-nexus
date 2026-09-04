@@ -173,9 +173,34 @@ export async function POST(request: NextRequest) {
     const { target, data } = body;
 
     if (target === 'collaborators' && Array.isArray(data)) {
+      // Busca dados atuais no banco para preservar google_connected e tokens salvos
+      const { data: currentDbCollabs } = await supabaseAdmin
+        .from('calendar_collaborators')
+        .select('id, google_connected, sync_status, avatar, google_access_token, google_refresh_token, google_token_expiry');
+
+      const dbMap = new Map((currentDbCollabs || []).map((c) => [c.id, c]));
+
+      const safeData = data.map((item: any) => {
+        const existing = dbMap.get(item.id);
+        const avatar = item.avatar || existing?.avatar || (item.name ? item.name.slice(0, 2).toUpperCase() : 'CO');
+        if (existing?.google_connected && item.google_connected === false) {
+          // Mantém conexão ativa se o banco já tiver registrado
+          return {
+            ...item,
+            avatar,
+            google_connected: true,
+            sync_status: existing.sync_status || 'synced',
+          };
+        }
+        return {
+          ...item,
+          avatar,
+        };
+      });
+
       const { error } = await supabaseAdmin
         .from('calendar_collaborators')
-        .upsert(data, { onConflict: 'id' });
+        .upsert(safeData, { onConflict: 'id' });
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });

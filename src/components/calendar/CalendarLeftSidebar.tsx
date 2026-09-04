@@ -24,6 +24,7 @@ interface CalendarLeftSidebarProps {
   onConnectAccount?: (collaboratorId: string, email: string) => void;
   onDisconnectAccount?: (collaboratorId: string) => void;
   currentCollaboratorId?: string | null;
+  isAdmin?: boolean;
 }
 
 export function CalendarLeftSidebar({
@@ -44,6 +45,7 @@ export function CalendarLeftSidebar({
   onConnectAccount,
   onDisconnectAccount,
   currentCollaboratorId,
+  isAdmin,
 }: CalendarLeftSidebarProps) {
   const [selectedDepartment, setSelectedDepartment] = useState<Department>('all');
   const [collaboratorSearch, setCollaboratorSearch] = useState('');
@@ -203,30 +205,36 @@ export function CalendarLeftSidebar({
               {/* Status / Ação Individual de Conexão Google */}
               {(() => {
                 const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
+                const canManage = Boolean(isOwner || isAdmin);
 
                 return (
                   <div className="shrink-0 ml-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     {acc.googleConnected ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"
                           title={`Google conectado (${acc.email})`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          Google
-                        </span>
-                        {isOwner && onDisconnectAccount && (
+                        />
+                        {canManage && onDisconnectAccount ? (
                           <button
                             type="button"
                             onClick={() => onDisconnectAccount(acc.id)}
-                            className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
-                            title={`Desconectar sua Google Agenda (${acc.name})`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/40 transition cursor-pointer active:scale-95 shadow-xs"
+                            title={`Desconectar Google Agenda de ${acc.name}`}
                           >
-                            <LogOut className="w-3 h-3" />
+                            <LogOut className="w-2.5 h-2.5 shrink-0" />
+                            <span>Desconectar</span>
                           </button>
+                        ) : (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            title={`Google conectado (${acc.email})`}
+                          >
+                            Conectado
+                          </span>
                         )}
                       </div>
-                    ) : isOwner && onConnectAccount ? (
+                    ) : canManage && onConnectAccount ? (
                       <button
                         type="button"
                         onClick={() => onConnectAccount(acc.id, acc.email)}

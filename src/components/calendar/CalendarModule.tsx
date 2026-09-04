@@ -442,6 +442,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onConnectAccount={handleConnectCollaborator}
           onDisconnectAccount={handleDisconnectCollaborator}
           currentCollaboratorId={currentCollaboratorId}
+          isAdmin={isAdmin}
         />
 
         {/* Área Central (Semana, Dia, Mês ou Lista) */}
@@ -617,6 +618,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
           onConnectAccount={handleConnectCollaborator}
           onDisconnectAccount={handleDisconnectCollaborator}
           currentCollaboratorId={currentCollaboratorId}
+          isAdmin={isAdmin}
         />
       )}
 
