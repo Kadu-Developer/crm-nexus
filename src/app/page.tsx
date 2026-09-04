@@ -548,7 +548,7 @@ function AppContent() {
 
           {/* Indicador de Usuário */}
           <div className="hidden xl:flex items-center gap-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5">
-            {profile?.role === 'admin_ceo' ? (
+            {isAdmin ? (
               <ShieldCheck className="w-4 h-4 text-amber-500" />
             ) : (
               <Users className="w-3.5 h-3.5 text-blue-500" />
@@ -556,9 +556,9 @@ function AppContent() {
             <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[150px]">
               {profile?.name}
             </span>
-            {profile?.role === 'admin_ceo' && (
+            {isAdmin && (
               <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded font-bold">
-                CEO
+                {profile?.role === 'admin_ceo' ? 'CEO' : 'ADMIN'}
               </span>
             )}
           </div>
@@ -584,7 +584,7 @@ function AppContent() {
           </button>
 
           {/* Botão Convidar Colaborador (Admin / CEO) */}
-          {profile?.role === 'admin_ceo' && (
+          {isAdmin && (
             <button
               onClick={() => setIsAddCollabOpen(true)}
               className="hidden md:flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors active:scale-95 cursor-pointer shadow-xs"
@@ -654,9 +654,9 @@ function AppContent() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{profile?.name}</p>
-                    {profile?.role === 'admin_ceo' && (
+                    {isAdmin && (
                       <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold rounded">
-                        CEO
+                        {profile?.role === 'admin_ceo' ? 'CEO' : 'ADMIN'}
                       </span>
                     )}
                   </div>
@@ -776,7 +776,7 @@ function AppContent() {
                   <span>Novo Lead (Quick Capture)</span>
                 </button>
 
-                {profile?.role === 'admin_ceo' && (
+                {isAdmin && (
                   <button
                     type="button"
                     onClick={() => {

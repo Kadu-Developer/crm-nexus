@@ -158,9 +158,9 @@ function LoginContent() {
               {/* Seção Superiores / Visão Administrativa */}
               <div className="space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
-                  Visão Administrativa (CEO / Admin)
+                  Visão Administrativa (Diretoria / Admin)
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleQuickFill('marcel@nexusflowtech.com.br', 'Nexus@2026')}
@@ -171,6 +171,18 @@ function LoginContent() {
                       <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">CEO</span>
                     </div>
                     <p className="text-[10px] text-slate-500 truncate">Founder & CEO / CFO</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('patrik@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Patrik Rodrigues</p>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">Admin Tech</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">CTO & Automação / IA</p>
                   </button>
 
                   <button

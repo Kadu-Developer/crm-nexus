@@ -396,8 +396,10 @@ export function QuickCaptureModal({ isOpen, onClose, onSave }: QuickCaptureModal
                 <div className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 flex items-center gap-2">
                   <UserCircle2 className="w-4 h-4 text-blue-400" />
                   <span>{profile?.name || 'Tiago Santos'}</span>
-                  {profile?.role === 'admin_ceo' && (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded font-bold">CEO</span>
+                  {(profile?.role === 'admin_ceo' || profile?.role === 'admin_tech') && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded font-bold">
+                      {profile?.role === 'admin_ceo' ? 'CEO' : 'ADMIN'}
+                    </span>
                   )}
                 </div>
               </div>
