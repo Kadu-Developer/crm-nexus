@@ -12,7 +12,40 @@ interface DeleteLeadBody {
   oppId?: string;
   companyId?: string;
   companyName?: string;
+  tradeName?: string;
   cnpj?: string;
+}
+
+export async function GET() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('opportunities')
+      .select(`
+        *,
+        company:companies(
+          *,
+          contacts(*)
+        ),
+        consultant:profiles(*),
+        qualification:qualifications(*),
+        activities(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Erro ao consultar oportunidades via supabaseAdmin:', error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Erro na rota GET /api/crm/leads:', err);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: NextRequest) {
@@ -30,6 +63,7 @@ export async function DELETE(request: NextRequest) {
     const companyIdParam = searchParams.get('companyId');
     const cnpjParam = searchParams.get('cnpj');
     const companyNameParam = searchParams.get('companyName');
+    const tradeNameParam = searchParams.get('tradeName');
 
     const opportunityIds: string[] = [
       ...(Array.isArray(body.opportunityIds) ? body.opportunityIds : []),
@@ -40,6 +74,7 @@ export async function DELETE(request: NextRequest) {
     const companyId: string | undefined = body.companyId || companyIdParam || undefined;
     const cnpj: string | undefined = (body.cnpj || cnpjParam || '').trim() || undefined;
     const companyName: string | undefined = (body.companyName || companyNameParam || '').trim() || undefined;
+    const tradeName: string | undefined = (body.tradeName || tradeNameParam || '').trim() || undefined;
 
     let deletedAny = false;
 
@@ -96,12 +131,16 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // 4. Se temos Nome da Empresa e ainda não deletamos por companyId/CNPJ, deleta por nome
-    if (companyName && !deletedAny) {
+    // 4. Se temos Nome da Empresa ou Nome Fantasia, deleta por nome
+    const namesToSearch = [companyName, tradeName].filter(Boolean) as string[];
+    for (const rawName of namesToSearch) {
+      const sanitized = rawName.replace(/[,()]/g, ' ').trim();
+      if (!sanitized) continue;
+
       const { data: compByName } = await supabaseAdmin
         .from('companies')
         .select('id')
-        .or(`corporate_name.ilike.${companyName},trade_name.ilike.${companyName}`);
+        .or(`corporate_name.ilike.%${sanitized}%,trade_name.ilike.%${sanitized}%`);
 
       if (compByName && compByName.length > 0) {
         const cIds = compByName.map((c) => c.id);

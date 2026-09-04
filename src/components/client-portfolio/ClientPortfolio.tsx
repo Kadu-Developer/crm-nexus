@@ -8,6 +8,11 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { useAuth } from '@/lib/supabase/auth-context';
 import { crmService } from '@/lib/supabase/crm-service';
 
+function isUUID(str?: string): boolean {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
+
 interface ClientPortfolioProps {
   opportunities: Opportunity[];
   onSelectOpportunity: (opportunity: Opportunity) => void;
@@ -15,6 +20,7 @@ interface ClientPortfolioProps {
     opportunityIds: string[];
     companyId?: string;
     companyName?: string;
+    tradeName?: string;
     cnpj?: string;
   }) => Promise<void> | void;
 }
@@ -29,6 +35,7 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity, onDeleteLe
   const handleDeleteClient = async (client: {
     id: string;
     name: string;
+    tradeName?: string;
     legalName: string;
     opportunities: Opportunity[];
   }) => {
@@ -47,23 +54,21 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity, onDeleteLe
 
     try {
       const oppIds = client.opportunities.map((o) => o.id);
-      const companyId = client.opportunities.find((o) => o.companyId)?.companyId;
+      const companyId = client.opportunities.find((o) => o.companyId)?.companyId || (isUUID(client.id) ? client.id : undefined);
       const cnpj = client.opportunities.find((o) => o.cnpj)?.cnpj;
 
+      const payload = {
+        opportunityIds: oppIds,
+        companyId,
+        companyName: client.legalName || client.name,
+        tradeName: client.tradeName || client.name,
+        cnpj,
+      };
+
       if (onDeleteLead) {
-        await onDeleteLead({
-          opportunityIds: oppIds,
-          companyId,
-          companyName: client.legalName || client.name,
-          cnpj,
-        });
+        await onDeleteLead(payload);
       } else {
-        const res = await crmService.deleteLead({
-          opportunityIds: oppIds,
-          companyId,
-          companyName: client.legalName || client.name,
-          cnpj,
-        });
+        const res = await crmService.deleteLead(payload);
         if (!res.success) {
           throw new Error(res.error || 'Falha ao excluir lead');
         }
@@ -92,8 +97,9 @@ export function ClientPortfolio({ opportunities, onSelectOpportunity, onDeleteLe
       );
       const current = sorted[0];
       return {
-        id: current.cnpj || current.companyName,
+        id: current.companyId || current.cnpj || current.companyName,
         name: current.tradeName || current.companyName,
+        tradeName: current.tradeName || current.companyName,
         legalName: current.companyName,
         segment: current.segment,
         city: current.city,

@@ -4,7 +4,7 @@ import { Opportunity, PipelineStage, Activity, Contact, Qualification, Segment, 
 const DEMO_OPPORTUNITIES_KEY = 'nexus_demo_opportunities';
 const DELETED_LEADS_KEY = 'nexus_deleted_lead_keys';
 
-function getDeletedLeadKeys(): Set<string> {
+export function getDeletedLeadKeys(): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
     const raw = localStorage.getItem(DELETED_LEADS_KEY);
@@ -14,15 +14,28 @@ function getDeletedLeadKeys(): Set<string> {
   }
 }
 
-function addDeletedLeadKey(key: string) {
+export function addDeletedLeadKey(key?: string) {
   if (typeof window === 'undefined' || !key) return;
   try {
     const keys = getDeletedLeadKeys();
-    keys.add(key.toLowerCase().trim());
-    localStorage.setItem(DELETED_LEADS_KEY, JSON.stringify(Array.from(keys)));
+    const normalized = key.toLowerCase().trim();
+    if (normalized) {
+      keys.add(normalized);
+      localStorage.setItem(DELETED_LEADS_KEY, JSON.stringify(Array.from(keys)));
+    }
   } catch {
     // Silently ignore
   }
+}
+
+export function isOpportunityDeleted(opp: Opportunity, deletedKeys: Set<string>): boolean {
+  if (!opp) return false;
+  if (opp.id && deletedKeys.has(opp.id.toLowerCase().trim())) return true;
+  if (opp.companyId && deletedKeys.has(opp.companyId.toLowerCase().trim())) return true;
+  if (opp.cnpj && deletedKeys.has(opp.cnpj.toLowerCase().trim())) return true;
+  if (opp.companyName && deletedKeys.has(opp.companyName.toLowerCase().trim())) return true;
+  if (opp.tradeName && deletedKeys.has(opp.tradeName.toLowerCase().trim())) return true;
+  return false;
 }
 
 async function getDemoOpportunities(): Promise<Opportunity[]> {
@@ -30,16 +43,13 @@ async function getDemoOpportunities(): Promise<Opportunity[]> {
 
   try {
     const stored = localStorage.getItem(DEMO_OPPORTUNITIES_KEY);
-    let storedOpportunities = stored ? JSON.parse(stored) as Opportunity[] : [];
+    let storedOpportunities = stored ? (JSON.parse(stored) as Opportunity[]) : [];
     const deletedKeys = getDeletedLeadKeys();
-    
-    // Remove quaisquer leads mock legados (ex: opp_1, opp_2) e leads excluídos
+
+    // Remove quaisquer leads mock legados (ex: opp_1, opp_metalalfa) e leads excluídos
     storedOpportunities = storedOpportunities.filter((o) => {
       if (o.id.startsWith('opp_')) return false;
-      if (deletedKeys.has(o.id.toLowerCase().trim())) return false;
-      const compKey = (o.cnpj || o.companyName || '').toLowerCase().trim();
-      if (compKey && deletedKeys.has(compKey)) return false;
-      return true;
+      return !isOpportunityDeleted(o, deletedKeys);
     });
     saveDemoOpportunities(storedOpportunities);
 
@@ -51,7 +61,7 @@ async function getDemoOpportunities(): Promise<Opportunity[]> {
       ]);
       const newSheetOpportunities = sheetOpportunities.filter((opportunity) => {
         const key = (opportunity.cnpj || opportunity.companyName || '').toLowerCase().trim();
-        return !existingKeys.has(key) && !deletedKeys.has(key) && !deletedKeys.has(opportunity.id);
+        return !existingKeys.has(key) && !isOpportunityDeleted(opportunity, deletedKeys);
       });
       const mergedOpportunities = [...storedOpportunities, ...newSheetOpportunities];
       saveDemoOpportunities(mergedOpportunities);
@@ -366,7 +376,31 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
 export const crmService = {
   // 1. Listar oportunidades (Supabase ➔ Google Sheets / Local)
   async getOpportunities(): Promise<Opportunity[]> {
+    const deletedKeys = getDeletedLeadKeys();
+
     try {
+      // 1. Busca via rota de API backend segura com supabaseAdmin
+      if (typeof window !== 'undefined') {
+        const res = await fetch('/api/crm/leads', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data)) {
+            const opps = json.data
+              .map(mapSupabaseToOpportunity)
+              .filter((opp: Opportunity) => !isOpportunityDeleted(opp, deletedKeys));
+
+            if (opps.length > 0) {
+              return opps;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Busca via /api/crm/leads falhou:', err);
+    }
+
+    try {
+      // 2. Fallback direto Supabase client
       const { data, error } = await supabase
         .from('opportunities')
         .select(`
@@ -382,13 +416,20 @@ export const crmService = {
         .order('created_at', { ascending: false });
 
       if (!error && data && data.length > 0) {
-        return data.map(mapSupabaseToOpportunity);
+        const opps = data
+          .map(mapSupabaseToOpportunity)
+          .filter((opp: Opportunity) => !isOpportunityDeleted(opp, deletedKeys));
+        if (opps.length > 0) {
+          return opps;
+        }
       }
     } catch (err) {
       console.warn('Conexão Supabase query falhou:', err);
     }
 
-    return getDemoOpportunities();
+    // 3. Fallback demo / planilhas Google (com filtro rigoroso de chaves excluídas)
+    const demo = await getDemoOpportunities();
+    return demo.filter((opp) => !isOpportunityDeleted(opp, deletedKeys));
   },
 
   // 2. Atualizar estágio e probabilidade (Kanban Drag & Drop)
@@ -680,15 +721,19 @@ export const crmService = {
     opportunityIds?: string[];
     companyId?: string;
     companyName?: string;
+    tradeName?: string;
     cnpj?: string;
   }): Promise<{ success: boolean; error?: string }> {
     const oppIds = params.opportunityIds || [];
     const compName = params.companyName?.trim() || '';
+    const tradeName = params.tradeName?.trim() || '';
     const cnpj = params.cnpj?.trim() || '';
 
-    // 1. Marca chaves na blacklist local para não reaparecer do Google Sheets / Demo
+    // 1. Marca chaves na blacklist local para não reaparecer de nenhuma fonte (Google Sheets / Demo / Supabase)
     if (cnpj) addDeletedLeadKey(cnpj);
     if (compName) addDeletedLeadKey(compName);
+    if (tradeName) addDeletedLeadKey(tradeName);
+    if (params.companyId) addDeletedLeadKey(params.companyId);
     oppIds.forEach((id) => addDeletedLeadKey(id));
 
     // 2. Chama rota de API segura do backend com supabaseAdmin
@@ -700,7 +745,8 @@ export const crmService = {
           body: JSON.stringify({
             opportunityIds: oppIds,
             companyId: params.companyId,
-            companyName: compName,
+            companyName: compName || tradeName,
+            tradeName,
             cnpj,
           }),
         });
@@ -709,13 +755,11 @@ export const crmService = {
           const data = await res.json();
           if (data.success) {
             // Atualiza storage local também
+            const deletedKeys = getDeletedLeadKeys();
             const currentOpportunities = await getDemoOpportunities();
-            const updatedOpportunities = currentOpportunities.filter((o) => {
-              if (oppIds.includes(o.id)) return false;
-              if (cnpj && o.cnpj === cnpj) return false;
-              if (compName && o.companyName.toLowerCase() === compName.toLowerCase()) return false;
-              return true;
-            });
+            const updatedOpportunities = currentOpportunities.filter(
+              (o) => !isOpportunityDeleted(o, deletedKeys)
+            );
             saveDemoOpportunities(updatedOpportunities);
             return { success: true };
           }
@@ -739,22 +783,29 @@ export const crmService = {
     }
 
     // 4. Fallback local
+    const deletedKeys = getDeletedLeadKeys();
     const currentOpportunities = await getDemoOpportunities();
-    const updatedOpportunities = currentOpportunities.filter((o) => {
-      if (oppIds.includes(o.id)) return false;
-      if (cnpj && o.cnpj === cnpj) return false;
-      if (compName && o.companyName.toLowerCase() === compName.toLowerCase()) return false;
-      return true;
-    });
+    const updatedOpportunities = currentOpportunities.filter(
+      (o) => !isOpportunityDeleted(o, deletedKeys)
+    );
     saveDemoOpportunities(updatedOpportunities);
     return { success: true };
   },
 
   // 8. Excluir oportunidade individual
-  async deleteOpportunity(oppId: string, companyId?: string): Promise<{ success: boolean; error?: string }> {
+  async deleteOpportunity(
+    oppId: string,
+    companyId?: string,
+    companyName?: string,
+    cnpj?: string,
+    tradeName?: string
+  ): Promise<{ success: boolean; error?: string }> {
     return this.deleteLead({
       opportunityIds: [oppId],
       companyId,
+      companyName,
+      tradeName,
+      cnpj,
     });
   }
 };

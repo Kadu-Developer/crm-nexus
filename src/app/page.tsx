@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Opportunity, PipelineStage, Activity, Qualification } from '@/types/crm';
-import { INITIAL_OPPORTUNITIES, STAGES } from '@/lib/mock-data';
+import { STAGES } from '@/lib/mock-data';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { QuickCaptureModal } from '@/components/quick-capture/QuickCaptureModal';
 import { LeadDetailModal } from '@/components/lead-modal/LeadDetailModal';
@@ -50,7 +50,7 @@ function AppContent() {
   const { profile, isLoading, signOut, changePassword } = useAuth();
   const router = useRouter();
 
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(INITIAL_OPPORTUNITIES);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -93,7 +93,7 @@ function AppContent() {
   }, []);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [loadingData, setLoadingData] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [consultantFilter, setConsultantFilter] = useState<string>('all');
 
   // Redirecionamento para Login se não estiver autenticado
@@ -107,11 +107,15 @@ function AppContent() {
     if (!profile) return;
 
     setLoadingData(true);
-    const data = await crmService.getOpportunities();
-    if (data && data.length > 0) {
-      setOpportunities(data);
+    try {
+      const data = await crmService.getOpportunities();
+      setOpportunities(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar oportunidades do pipeline:', err);
+      setOpportunities([]);
+    } finally {
+      setLoadingData(false);
     }
-    setLoadingData(false);
   }, [profile]);
 
   useEffect(() => {
@@ -276,18 +280,22 @@ function AppContent() {
     opportunityIds: string[];
     companyId?: string;
     companyName?: string;
+    tradeName?: string;
     cnpj?: string;
   }) => {
     const oppIds = params.opportunityIds || [];
     const compName = params.companyName?.trim().toLowerCase() || '';
+    const tradeName = params.tradeName?.trim().toLowerCase() || '';
     const cnpj = params.cnpj?.trim() || '';
 
     // Atualização otimista imediata no estado
     setOpportunities((prev) =>
       prev.filter((opp) => {
         if (oppIds.includes(opp.id)) return false;
+        if (params.companyId && opp.companyId === params.companyId) return false;
         if (cnpj && opp.cnpj === cnpj) return false;
-        if (compName && opp.companyName.toLowerCase() === compName) return false;
+        if (compName && (opp.companyName.toLowerCase() === compName || opp.tradeName?.toLowerCase() === compName)) return false;
+        if (tradeName && (opp.tradeName?.toLowerCase() === tradeName || opp.companyName.toLowerCase() === tradeName)) return false;
         return true;
       })
     );
@@ -296,7 +304,10 @@ function AppContent() {
     if (
       selectedOpportunity &&
       (oppIds.includes(selectedOpportunity.id) ||
-        (compName && selectedOpportunity.companyName.toLowerCase() === compName))
+        (params.companyId && selectedOpportunity.companyId === params.companyId) ||
+        (cnpj && selectedOpportunity.cnpj === cnpj) ||
+        (compName && (selectedOpportunity.companyName.toLowerCase() === compName || selectedOpportunity.tradeName?.toLowerCase() === compName)) ||
+        (tradeName && (selectedOpportunity.tradeName?.toLowerCase() === tradeName || selectedOpportunity.companyName.toLowerCase() === tradeName)))
     ) {
       setSelectedOpportunity(null);
       setIsDetailOpen(false);
@@ -318,7 +329,13 @@ function AppContent() {
       setIsDetailOpen(false);
     }
 
-    const res = await crmService.deleteOpportunity(oppId, target?.companyId);
+    const res = await crmService.deleteOpportunity(
+      oppId,
+      target?.companyId,
+      target?.companyName,
+      target?.cnpj,
+      target?.tradeName
+    );
     if (!res.success) {
       throw new Error(res.error || 'Erro ao excluir oportunidade');
     }
