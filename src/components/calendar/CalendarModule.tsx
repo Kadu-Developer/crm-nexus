@@ -232,6 +232,11 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Conectar Google individual por conta
   const handleConnectCollaborator = async (collabId: string, email: string) => {
+    if (currentCollaboratorId && collabId !== currentCollaboratorId) {
+      toast.error('Apenas o titular desta conta pode conectar a sua Google Agenda.');
+      return;
+    }
+
     try {
       const res = await fetch(
         `/api/calendar/auth?collaboratorId=${encodeURIComponent(collabId)}&email=${encodeURIComponent(email)}&redirect=/?view=calendar`
@@ -247,6 +252,12 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Desconectar conta individual
   const handleDisconnectCollaborator = async (collabId: string) => {
+    // Regra estrita: somente quem conectou sua própria agenda pode desconectá-la
+    if (currentCollaboratorId && collabId !== currentCollaboratorId) {
+      toast.error('Somente quem conectou esta agenda tem permissão para desconectá-la.');
+      return;
+    }
+
     // Imediatamente remove os eventos da tela para feedback instantâneo
     setEvents((prev) => prev.filter((e) => (e.collaboratorId || e.ctoId) !== collabId));
     setAccounts((prev) =>

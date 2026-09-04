@@ -205,7 +205,6 @@ export function CalendarLeftSidebar({
               {/* Status / Ação Individual de Conexão Google */}
               {(() => {
                 const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
-                const canManage = Boolean(isOwner || isAdmin);
 
                 return (
                   <div className="shrink-0 ml-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -215,12 +214,12 @@ export function CalendarLeftSidebar({
                           className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"
                           title={`Google conectado (${acc.email})`}
                         />
-                        {canManage && onDisconnectAccount ? (
+                        {isOwner && onDisconnectAccount ? (
                           <button
                             type="button"
                             onClick={() => onDisconnectAccount(acc.id)}
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 hover:bg-red-100 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/40 transition cursor-pointer active:scale-95 shadow-xs"
-                            title={`Desconectar Google Agenda de ${acc.name}`}
+                            title={`Desconectar sua Google Agenda (${acc.name})`}
                           >
                             <LogOut className="w-2.5 h-2.5 shrink-0" />
                             <span>Desconectar</span>
@@ -234,7 +233,7 @@ export function CalendarLeftSidebar({
                           </span>
                         )}
                       </div>
-                    ) : canManage && onConnectAccount ? (
+                    ) : isOwner && onConnectAccount ? (
                       <button
                         type="button"
                         onClick={() => onConnectAccount(acc.id, acc.email)}

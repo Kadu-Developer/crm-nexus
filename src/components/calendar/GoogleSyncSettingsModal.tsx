@@ -176,11 +176,10 @@ export function GoogleSyncSettingsModal({
                   <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5 min-h-[26px]">
                     {(() => {
                       const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
-                      const canManage = Boolean(isOwner || isAdmin);
-                      if (!canManage) {
+                      if (!isOwner) {
                         return (
                           <span className="text-[10px] text-slate-400 font-medium">
-                            Apenas {acc.name.split(' ')[0]} ou Admin pode alterar
+                            Apenas {acc.name.split(' ')[0]} pode alterar
                           </span>
                         );
                       }
