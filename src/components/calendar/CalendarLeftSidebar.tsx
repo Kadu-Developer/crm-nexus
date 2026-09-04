@@ -205,6 +205,7 @@ export function CalendarLeftSidebar({
               {/* Status / Ação Individual de Conexão Google */}
               {(() => {
                 const isOwner = Boolean(currentCollaboratorId && acc.id === currentCollaboratorId);
+                const canConnect = Boolean(isOwner || isAdmin);
 
                 return (
                   <div className="shrink-0 ml-1.5 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -233,12 +234,12 @@ export function CalendarLeftSidebar({
                           </span>
                         )}
                       </div>
-                    ) : isOwner && onConnectAccount ? (
+                    ) : canConnect && onConnectAccount ? (
                       <button
                         type="button"
                         onClick={() => onConnectAccount(acc.id, acc.email)}
                         className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-cyan-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition cursor-pointer active:scale-95 shadow-xs"
-                        title={`Conectar sua Google Agenda (${acc.name})`}
+                        title={isOwner ? `Conectar sua Google Agenda (${acc.name})` : `Conectar Google Agenda de ${acc.name}`}
                       >
                         <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24">
                           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

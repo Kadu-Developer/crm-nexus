@@ -58,14 +58,15 @@ export function EventModal({
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [linkedOpportunityId, setLinkedOpportunityId] = useState<string>('');
 
-  // Quando o colaborador muda, se não for admin, mantém travado
+  // Quando o colaborador muda
   const handleCollaboratorChange = (id: string) => {
-    if (!isUserAdmin) return;
     setCollaboratorId(id);
     const acc = accounts.find((a) => a.id === id);
     const name = acc?.name || '';
     const cleaned = title.replace(/^[^\s:]+:\s*/, '').trim();
-    setTitle(name ? `${name}: ${cleaned}` : cleaned);
+    if (!isUserAdmin && name) {
+      setTitle(`${name}: ${cleaned}`);
+    }
   };
 
   useEffect(() => {
@@ -176,12 +177,13 @@ export function EventModal({
       finalTitle = finalTitle.replace(new RegExp(`^${collaboratorName}:\\s*`), '').trim();
     }
 
+    const chosenCollabId = collaboratorId || effectiveCollabId;
     const eventPayload: Partial<CalendarEvent> = {
       id: initialEvent?.id,
       title: finalTitle,
       description: description.trim(),
-      collaboratorId: initialEvent?.id ? (initialEvent.collaboratorId || effectiveCollabId) : effectiveCollabId,
-      ctoId: initialEvent?.id ? (initialEvent.collaboratorId || effectiveCollabId) : effectiveCollabId,
+      collaboratorId: initialEvent?.id ? (initialEvent.collaboratorId || chosenCollabId) : chosenCollabId,
+      ctoId: initialEvent?.id ? (initialEvent.collaboratorId || chosenCollabId) : chosenCollabId,
       additionalCollaboratorIds,
       categoryId,
       startTime: start.toISOString(),
@@ -250,21 +252,28 @@ export function EventModal({
               <label className="block font-bold text-slate-700 dark:text-slate-300">
                 Agenda Principal do Evento *
               </label>
-              <span className="text-[10px] text-blue-600 dark:text-cyan-400 font-bold flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
-                <Lock className="w-3 h-3" /> Sua Agenda
-              </span>
+              {collaboratorId === effectiveCollabId ? (
+                <span className="text-[10px] text-blue-600 dark:text-cyan-400 font-bold flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                  <Lock className="w-3 h-3" /> Sua Agenda
+                </span>
+              ) : (
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  <Users className="w-3 h-3" /> {accounts.find((a) => a.id === collaboratorId)?.name?.split(' ')[0] || 'Selecionado'}
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
               {accounts.map((acc) => {
                 const isMine = acc.id === effectiveCollabId;
+                const canSelect = isUserAdmin || isMine;
                 return (
                   <button
                     key={acc.id}
                     type="button"
-                    disabled={!isMine}
-                    onClick={() => setCollaboratorId(acc.id)}
+                    disabled={!canSelect}
+                    onClick={() => handleCollaboratorChange(acc.id)}
                     className={`p-2 rounded-xl border text-left flex items-center gap-2 transition ${
-                      !isMine ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+                      !canSelect ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
                     } ${
                       collaboratorId === acc.id
                         ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-bold ring-1 ring-blue-500/30'
@@ -287,7 +296,7 @@ export function EventModal({
           </div>
             {!isUserAdmin && (
               <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
-                ℹ️ O criador do evento é definido automaticamente como responsável principal. Apenas Administradores podem selecionar outro colaborador.
+                ℹ️ Agendado diretamente na sua conta. Administradores podem selecionar outro colaborador.
               </p>
             )}
           </div>

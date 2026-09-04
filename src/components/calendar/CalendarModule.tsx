@@ -187,7 +187,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
       const existing = events.find((e) => e.id === eventData.id);
       if (existing) {
         const ownerId = existing.collaboratorId || existing.ctoId;
-        if (ownerId && ownerId !== currentCollaboratorId) {
+        if (ownerId && ownerId !== currentCollaboratorId && !isAdmin) {
           toast.error('Somente o proprietário deste evento pode alterá-lo.');
           return;
         }
@@ -219,7 +219,7 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
     const existing = events.find((e) => e.id === eventId);
     if (existing) {
       const ownerId = existing.collaboratorId || existing.ctoId;
-      if (ownerId && ownerId !== currentCollaboratorId) {
+      if (ownerId && ownerId !== currentCollaboratorId && !isAdmin) {
         toast.error('Somente o proprietário deste evento pode excluí-lo.');
         return;
       }
@@ -232,8 +232,8 @@ export function CalendarModule({ opportunities = [], onSelectOpportunity }: Cale
 
   // Conectar Google individual por conta
   const handleConnectCollaborator = async (collabId: string, email: string) => {
-    if (currentCollaboratorId && collabId !== currentCollaboratorId) {
-      toast.error('Apenas o titular desta conta pode conectar a sua Google Agenda.');
+    if (currentCollaboratorId && collabId !== currentCollaboratorId && !isAdmin) {
+      toast.error('Apenas o titular desta conta ou Administrador pode conectar a sua Google Agenda.');
       return;
     }
 

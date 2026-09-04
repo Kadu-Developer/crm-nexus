@@ -161,6 +161,24 @@ export async function DELETE(request: NextRequest) {
       return res;
     }
 
+    if (target === 'event') {
+      const eventId = request.nextUrl.searchParams.get('eventId');
+      if (!eventId) {
+        return NextResponse.json({ success: false, error: 'eventId é obrigatório' }, { status: 400 });
+      }
+
+      const { error } = await supabaseAdmin
+        .from('calendar_events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Evento excluído com sucesso.' });
+    }
+
     return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -219,6 +237,45 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({ success: true });
+    }
+
+    if (target === 'event' && data) {
+      const eventPayload = {
+        id: data.id,
+        title: data.title,
+        description: data.description || '',
+        collaborator_id: data.collaboratorId || data.ctoId,
+        additional_collaborator_ids: data.additionalCollaboratorIds || [],
+        category_id: data.categoryId || 'tech_alignment',
+        start_time: data.startTime,
+        end_time: data.endTime,
+        is_all_day: data.isAllDay || false,
+        meet_url: data.meetUrl || null,
+        location: data.location || '',
+        attendees: data.attendees || [],
+        linked_opportunity_id: data.linkedOpportunityId || null,
+        opportunity_title: data.opportunityTitle || null,
+        opportunity_company_name: data.opportunityCompanyName || null,
+        opportunity_score: data.opportunityScore || null,
+        stage_title: data.stageTitle || null,
+        google_event_id: data.googleEventId || null,
+        recurrence: data.recurrence || 'none',
+        source: data.source || 'crm_nexus',
+        status: data.status || 'confirmed',
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: savedRow, error } = await supabaseAdmin
+        .from('calendar_events')
+        .upsert(eventPayload, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, event: savedRow });
     }
 
     return NextResponse.json({ success: false, error: 'Target inválido' }, { status: 400 });

@@ -369,6 +369,7 @@ class CalendarService {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
+            collaboratorId: collabId,
             createMeet: true,
           }),
         });
@@ -425,31 +426,47 @@ class CalendarService {
       this.setStorageItem(STORAGE_KEYS.EVENTS, updatedList);
     }
 
+    // 1. Salva via API route server (supabaseAdmin) para contornar bloqueios de RLS para colaboradores
     try {
-      await supabase.from('calendar_events').upsert({
-        id: savedEvent.id,
-        title: savedEvent.title,
-        description: savedEvent.description,
-        collaborator_id: savedEvent.collaboratorId,
-        additional_collaborator_ids: savedEvent.additionalCollaboratorIds,
-        category_id: savedEvent.categoryId,
-        start_time: savedEvent.startTime,
-        end_time: savedEvent.endTime,
-        is_all_day: savedEvent.isAllDay,
-        meet_url: savedEvent.meetUrl,
-        location: savedEvent.location,
-        attendees: savedEvent.attendees,
-        linked_opportunity_id: savedEvent.linkedOpportunityId,
-        opportunity_title: savedEvent.opportunityTitle,
-        opportunity_company_name: savedEvent.opportunityCompanyName,
-        opportunity_score: savedEvent.opportunityScore,
-        stage_title: savedEvent.stageTitle,
-        recurrence: savedEvent.recurrence,
-        source: savedEvent.source,
-        status: savedEvent.status,
+      const res = await fetch('/api/calendar/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: 'event',
+          data: savedEvent,
+        }),
       });
+      if (!res.ok) {
+        console.warn('Aviso ao salvar evento via API route:', await res.text());
+      }
     } catch {
-      // Ignora erro remoto
+      // Fallback: se a API route falhar, tenta via client do Supabase
+      try {
+        await supabase.from('calendar_events').upsert({
+          id: savedEvent.id,
+          title: savedEvent.title,
+          description: savedEvent.description,
+          collaborator_id: savedEvent.collaboratorId,
+          additional_collaborator_ids: savedEvent.additionalCollaboratorIds,
+          category_id: savedEvent.categoryId,
+          start_time: savedEvent.startTime,
+          end_time: savedEvent.endTime,
+          is_all_day: savedEvent.isAllDay,
+          meet_url: savedEvent.meetUrl,
+          location: savedEvent.location,
+          attendees: savedEvent.attendees,
+          linked_opportunity_id: savedEvent.linkedOpportunityId,
+          opportunity_title: savedEvent.opportunityTitle,
+          opportunity_company_name: savedEvent.opportunityCompanyName,
+          opportunity_score: savedEvent.opportunityScore,
+          stage_title: savedEvent.stageTitle,
+          recurrence: savedEvent.recurrence,
+          source: savedEvent.source,
+          status: savedEvent.status,
+        });
+      } catch {
+        // Ignora erro remoto
+      }
     }
 
     return savedEvent;
@@ -462,7 +479,10 @@ class CalendarService {
     this.setStorageItem(STORAGE_KEYS.EVENTS, filtered);
 
     try {
-      await fetch(`/api/calendar/events?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      await Promise.all([
+        fetch(`/api/calendar/data?target=event&eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' }),
+        fetch(`/api/calendar/events?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' }),
+      ]);
     } catch {
       // Ignora erro
     }
