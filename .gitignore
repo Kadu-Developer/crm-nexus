@@ -18,6 +18,8 @@
 
 # testing
 /coverage
+/.test-artifacts
+
 
 # next.js
 /.next/
