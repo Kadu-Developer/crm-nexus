@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Opportunity } from '@/types/crm';
@@ -45,19 +45,55 @@ export function CeoDashboard({ opportunities }: CeoDashboardProps) {
     ['pre_diag_agendado', 'pre_diag_realizado', 'diag_proposto', 'diag_contratado', 'diag_realizado'].includes(o.stage)
   ).length;
 
-  // Breakdown por consultor
-  const consultantData = USERS.filter((u) => u.role === 'consultant').map((u) => {
-    const userOpps = opportunities.filter((o) => o.consultantId === u.id);
-    const val = userOpps.reduce((acc, curr) => acc + (curr.proposedValue || curr.estimatedValue || 0), 0);
-    const weighted = userOpps.reduce((acc, curr) => acc + curr.weightedRevenue, 0);
-    const count = userOpps.length;
-    return {
+  // Breakdown por consultor (combina USERS com oportunidades reais)
+  const consultantMap = new Map<string, { name: string; total: number; weighted: number; count: number }>();
+
+  USERS.filter((u) => u.role === 'consultant').forEach((u) => {
+    consultantMap.set(u.id, {
       name: u.name.split(' ')[0],
-      total: val,
-      weighted: weighted,
-      count: count,
-    };
+      total: 0,
+      weighted: 0,
+      count: 0,
+    });
   });
+
+  opportunities.forEach((o) => {
+    const cid = o.consultantId;
+    const cname = (o.consultantName || 'Consultor').split(' ')[0];
+    const val = o.proposedValue || o.estimatedValue || 0;
+    const weighted = o.weightedRevenue || 0;
+
+    let targetKey: string | undefined;
+    if (cid && consultantMap.has(cid)) {
+      targetKey = cid;
+    } else {
+      for (const [key, valEntry] of consultantMap.entries()) {
+        if (valEntry.name.toLowerCase() === cname.toLowerCase()) {
+          targetKey = key;
+          break;
+        }
+      }
+    }
+
+    if (targetKey) {
+      const entry = consultantMap.get(targetKey)!;
+      entry.total += val;
+      entry.weighted += weighted;
+      entry.count += 1;
+    } else {
+      const newKey = cid || cname;
+      consultantMap.set(newKey, {
+        name: cname,
+        total: val,
+        weighted: weighted,
+        count: 1,
+      });
+    }
+  });
+
+  const consultantData = Array.from(consultantMap.values()).filter(
+    (c) => c.count > 0 || ['Thiago', 'Larissa', 'Bruno'].includes(c.name)
+  );
 
   // Breakdown por Origem de Lead
   const sourceMap: Record<string, number> = {};

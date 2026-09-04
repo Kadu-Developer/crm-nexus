@@ -152,60 +152,83 @@ function LoginContent() {
             {/* Acesso Rápido de Demonstração */}
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2">
               <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block text-center">
-                Acessos Rápidos da Equipe (Clique para preencher):
+                Acessos Rápidos para Testes (Clique para preencher):
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* Marcel Wachowicz (Founder & CEO / CFO) */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('marcel@nexusflowtech.com.br', 'Nexus@2026')}
-                  className="p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/30 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/50 text-left transition cursor-pointer flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Marcel Wachowicz</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">CEO / CFO</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 truncate">Founder & CEO / CFO</p>
-                </button>
 
-                {/* Patrik Rodrigues (CTO & IA e Automação) */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('patrik@nexusflowtech.com.br', 'Nexus@2026')}
-                  className="p-2.5 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/50 text-left transition cursor-pointer flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Patrik Rodrigues</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">CTO & IA</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 truncate">CTO & IA e Automação</p>
-                </button>
+              {/* Seção Superiores / Visão Administrativa */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
+                  Visão Administrativa (CEO / Admin)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('marcel@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/30 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Marcel Wachowicz</p>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">CEO</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">Founder & CEO / CFO</p>
+                  </button>
 
-                {/* Carlos Eduardo da Silva Ribeiro (Tech Lead Full Stack & IA) */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('carlos@nexusflowtech.com.br', 'Nexus@2026')}
-                  className="p-2.5 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/30 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-left transition cursor-pointer flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Carlos Eduardo</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">Tech Lead</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 truncate">Tech Lead Full Stack & IA</p>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('carlos@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/30 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Carlos Eduardo</p>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold">Admin Tech</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">Tech Lead & Engenharia</p>
+                  </button>
+                </div>
+              </div>
 
-                {/* Consultor Teste */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('consultor.teste@nexusflowtech.com.br', 'Nexus@2026')}
-                  className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/30 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-left transition cursor-pointer flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Consultor Teste</p>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">Consultor</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 truncate">Operação Comercial</p>
-                </button>
+              {/* Seção Consultores / Visão Individual */}
+              <div className="space-y-1 pt-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 block">
+                  Visão dos Consultores (Equipe Comercial)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('thiago.consultor@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/30 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Thiago Mendes</p>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">2 Leads</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">Consultor Sênior</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('larissa.consultora@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Larissa Santos</p>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">1 Lead</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">Consultora Negócios</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('bruno.consultor@nexusflowtech.com.br', 'Nexus@2026')}
+                    className="p-2 rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/40 dark:bg-teal-950/30 hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-left transition cursor-pointer flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between w-full mb-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white truncate text-xs">Bruno Carvalho</p>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold">1 Lead</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate">Consultor Estruturação</p>
+                  </button>
+                </div>
               </div>
             </div>
 

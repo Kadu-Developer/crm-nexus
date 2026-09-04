@@ -360,11 +360,15 @@ function AppContent() {
   const roleScopedOpportunities = isAdmin
     ? opportunities
     : opportunities.filter((opp) => {
-        if (!opp.consultantId) return true;
+        if (!opp.consultantId) return false;
         if (opp.consultantId === profile.id) return true;
-        if (opp.consultantName?.toLowerCase() === profile.name?.toLowerCase()) return true;
-        if (consultantFilter !== 'all' && opp.consultantId === consultantFilter) return true;
-        return true; // No modo CRM Nexus, consultor pode visualizar e abrir a ficha de oportunidades para trabalhar
+        const pName = (profile.name || '').toLowerCase().trim();
+        const cName = (opp.consultantName || '').toLowerCase().trim();
+        if (pName && cName && (cName.includes(pName) || pName.includes(cName))) return true;
+        const pFirst = pName.split(' ')[0];
+        const cFirst = cName.split(' ')[0];
+        if (pFirst && cFirst && pFirst.length > 2 && pFirst === cFirst) return true;
+        return false;
       });
 
   const displayedOpportunities = roleScopedOpportunities.filter((opp) => {

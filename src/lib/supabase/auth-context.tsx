@@ -43,7 +43,7 @@ const findMockUser = (email: string): AppUser | undefined => {
   if (cleanEmail.includes('carlos') && !cleanEmail.includes('marcel') && !cleanEmail.includes('patrik')) {
     // Carlos Eduardo da Silva Ribeiro (Tech Lead Full Stack & IA)
     return {
-      id: 'usr_carlos',
+      id: '7a626ae3-260a-4112-bf12-672a7819ca98',
       name: 'Carlos Eduardo da Silva Ribeiro',
       email: cleanEmail,
       role: 'admin_tech',
@@ -57,7 +57,7 @@ const findMockUser = (email: string): AppUser | undefined => {
   if (cleanEmail.includes('marcel')) {
     // Marcel Wachowicz (Founder & CEO / CFO)
     return {
-      id: 'usr_marcel',
+      id: '53bac6e7-3f19-4a5c-a88f-d0823f8b1ee9',
       name: 'Marcel Wachowicz',
       email: cleanEmail,
       role: 'admin_ceo',
@@ -70,7 +70,7 @@ const findMockUser = (email: string): AppUser | undefined => {
   if (cleanEmail.includes('patrik') || cleanEmail.includes('patrick')) {
     // Patrik Rodrigues (CTO & IA)
     return {
-      id: 'usr_patrik',
+      id: 'd4ec4f37-9d6d-4e0b-8154-760eb52ed669',
       name: 'Patrik Rodrigues',
       email: cleanEmail,
       role: 'admin_tech',
@@ -80,10 +80,46 @@ const findMockUser = (email: string): AppUser | undefined => {
     };
   }
 
-  if (cleanEmail.includes('teste') || cleanEmail.includes('consultor')) {
+  if (cleanEmail.includes('thiago')) {
+    return {
+      id: 'f5ec8799-615c-40d8-8795-d63d49ef9a97',
+      name: 'Thiago Mendes',
+      email: cleanEmail,
+      role: 'consultant',
+      avatar: 'TM',
+      commissionRate: 10,
+      mustChangePassword: false,
+    };
+  }
+
+  if (cleanEmail.includes('larissa')) {
+    return {
+      id: '1c735ff8-44ad-474b-a991-b7378e90a255',
+      name: 'Larissa Santos',
+      email: cleanEmail,
+      role: 'consultant',
+      avatar: 'LS',
+      commissionRate: 10,
+      mustChangePassword: false,
+    };
+  }
+
+  if (cleanEmail.includes('bruno')) {
+    return {
+      id: '31ef62be-800c-45b2-9fff-d2b67386e47e',
+      name: 'Bruno Carvalho',
+      email: cleanEmail,
+      role: 'consultant',
+      avatar: 'BC',
+      commissionRate: 10,
+      mustChangePassword: false,
+    };
+  }
+
+  if (cleanEmail === 'consultor@nexus.com.br' || cleanEmail === 'consultor.teste@nexusflowtech.com.br') {
     // Consultor Teste
     return {
-      id: 'usr_consultor_teste',
+      id: '4c7a1a15-9807-4abe-8562-7012f52e8304',
       name: 'Consultor Teste',
       email: cleanEmail,
       role: 'consultant',
@@ -151,8 +187,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1. Resolução instantânea para usuários conhecidos da equipe
       const mockUser = findMockUser(cleanEmail);
       if (mockUser) {
-        setUser(mockUser);
-        setProfile(mockUser);
+        const finalUser: AppUser = {
+          ...mockUser,
+          id: authUser?.id || mockUser.id,
+        };
+        setUser(finalUser);
+        setProfile(finalUser);
         setIsLoading(false);
         return;
       }

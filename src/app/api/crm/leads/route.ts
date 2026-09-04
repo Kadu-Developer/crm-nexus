@@ -131,25 +131,28 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // 4. Se temos Nome da Empresa ou Nome Fantasia, deleta por nome
-    const namesToSearch = [companyName, tradeName].filter(Boolean) as string[];
-    for (const rawName of namesToSearch) {
-      const sanitized = rawName.replace(/[,()]/g, ' ').trim();
-      if (!sanitized) continue;
+    // 4. Se temos Nome da Empresa ou Nome Fantasia e ainda não deletamos por ID/CNPJ, deleta por nome exato
+    if (!deletedAny) {
+      const namesToSearch = [companyName, tradeName].filter(Boolean) as string[];
+      for (const rawName of namesToSearch) {
+        if (deletedAny) break;
+        const sanitized = rawName.replace(/[,()]/g, ' ').trim();
+        if (!sanitized) continue;
 
-      const { data: compByName } = await supabaseAdmin
-        .from('companies')
-        .select('id')
-        .or(`corporate_name.ilike.%${sanitized}%,trade_name.ilike.%${sanitized}%`);
-
-      if (compByName && compByName.length > 0) {
-        const cIds = compByName.map((c) => c.id);
-        const { error: delErr } = await supabaseAdmin
+        const { data: compByName } = await supabaseAdmin
           .from('companies')
-          .delete()
-          .in('id', cIds);
+          .select('id')
+          .or(`corporate_name.ilike.${sanitized},trade_name.ilike.${sanitized}`);
 
-        if (!delErr) deletedAny = true;
+        if (compByName && compByName.length > 0) {
+          const cIds = compByName.map((c) => c.id);
+          const { error: delErr } = await supabaseAdmin
+            .from('companies')
+            .delete()
+            .in('id', cIds);
+
+          if (!delErr) deletedAny = true;
+        }
       }
     }
 
