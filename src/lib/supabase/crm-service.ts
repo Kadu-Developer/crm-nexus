@@ -28,6 +28,31 @@ export function addDeletedLeadKey(key?: string) {
   }
 }
 
+/**
+ * Desfaz `addDeletedLeadKey`.
+ *
+ * Existe para o caso em que a blacklist foi gravada otimista demais: se a
+ * exclusão no servidor é recusada — sessão expirada, por exemplo — o lead
+ * continua no banco, e uma chave de "excluído" o esconderia da lista sem que
+ * ele tenha sumido. Aí a exclusão seria um sucesso aparente e reversível por
+ * reload, que é pior do que falhar.
+ *
+ * Mesma normalização de `addDeletedLeadKey` (`lowercase` + `trim`), senão a
+ * remoção não encontraria a chave que a adição gravou.
+ */
+export function removeDeletedLeadKey(key?: string) {
+  if (typeof window === 'undefined' || !key) return;
+  try {
+    const keys = getDeletedLeadKeys();
+    const normalized = key.toLowerCase().trim();
+    if (normalized && keys.delete(normalized)) {
+      localStorage.setItem(DELETED_LEADS_KEY, JSON.stringify(Array.from(keys)));
+    }
+  } catch {
+    // Silently ignore
+  }
+}
+
 export function isOpportunityDeleted(opp: Opportunity, deletedKeys: Set<string>): boolean {
   if (!opp) return false;
   if (opp.id && deletedKeys.has(opp.id.toLowerCase().trim())) return true;
@@ -134,7 +159,11 @@ function mapSheetRow(headers: string[], values: string[], index: number): Opport
     city: row['cidade'] || 'São Paulo',
     companySize: sizeMap[normalizeSheetValue(row['porte'])] || 'media_50_199',
     employeeCount: Number(row['numero de funcionarios']) || undefined,
-    estimatedRevenueTier: '15m_a_50m',
+    // A planilha não tem coluna de faturamento, então a resposta honesta é
+    // `undefined` — mesma forma da linha acima. A constante que ficava aqui
+    // afirmava R$ 15–50 mi para todo lead importado, e era a única coisa no
+    // objeto sem origem correspondente.
+    estimatedRevenueTier: undefined,
     leadSource: sourceMap[normalizeSheetValue(row['origem'])] || 'outbound',
     consultantId: 'usr_carlos',
     consultantName: 'Carlos Eduardo',
@@ -246,9 +275,28 @@ const toCompanySize = (val: string): Opportunity['companySize'] => {
   return valid.includes(val) ? val as Opportunity['companySize'] : 'media_50_199';
 };
 
-const toRevenueTier = (val: string): RevenueTier => {
+/**
+ * `estimated_revenue_tier` é uma afirmação sobre o cliente, não um campo de
+ * exibição. Por isso o ausente é devolvido como `undefined` em vez de cair
+ * numa faixa: a coluna é `TEXT` nullable no schema e `estimatedRevenueTier` é
+ * opcional no tipo, então o silêncio é um valor legítimo e o funil sabe
+ * exibi-lo.
+ *
+ * O fallback anterior era `'15m_a_50m'`, que é a resposta mais cara possível:
+ * afirmar que a empresa fatura entre R$ 15 mi e R$ 50 mi sem ninguém ter
+ * perguntado. O mesmoraciocínio já vale duas linhas adiante para
+ * `employee_count`, que vai `NULL` quando não informado — escrever 0 seria
+ * afirmar que a empresa não tem funcionários.
+ *
+ * Um valor fora do enum também vira `undefined`, e não uma faixa: as duas
+ * últimas faixas do formulário (`50m_a_200m`, `acima_500m`) colapsam em
+ * `acima_50m` no CRM, então uma dessas strings vindo do banco é uma linha que
+ * não respeita o contrato — convertê-la esconderia a incompatibilidade atrás
+ * de um número plausível.
+ */
+const toRevenueTier = (val: string): RevenueTier | undefined => {
   const valid = ['ate_360k', '360k_a_4_8m', '4_8m_a_15m', '15m_a_50m', 'acima_50m'];
-  return valid.includes(val) ? val as RevenueTier : '15m_a_50m';
+  return valid.includes(val) ? val as RevenueTier : undefined;
 };
 
 const toLeadSource = (val: string): Opportunity['leadSource'] => {
@@ -348,7 +396,11 @@ export function mapSupabaseToOpportunity(row: SupabaseRow): Opportunity {
     city: getString(company, 'city', 'São Paulo'),
     companySize: toCompanySize(getString(company, 'company_size', 'media_50_199')),
     employeeCount: getNumber(company, 'employee_count'),
-    estimatedRevenueTier: toRevenueTier(getString(company, 'estimated_revenue_tier') || getString(company, 'revenue_tier', '15m_a_50m')),
+    // `revenue_tier` é o nome legado da mesma coluna: linhas antigas podem
+    // trazê-lo. O fallback é string vazia, não uma faixa — qualquer string
+    // não vazia que sobre here vira `undefined` no `toRevenueTier`, que é o
+    // resultado pretendido para dado ausente.
+    estimatedRevenueTier: toRevenueTier(getString(company, 'estimated_revenue_tier') || getString(company, 'revenue_tier')),
     leadSource: toLeadSource(getString(company, 'lead_source', 'outbound')),
     consultantId: getString(row, 'consultant_id'),
     consultantName: getString((row.consultant as SupabaseRow) || {}, 'name', 'Carlos Eduardo'),
@@ -476,7 +528,15 @@ export const crmService = {
             website: opp.website || null,
             segment: opp.segment || 'servicos',
             company_size: opp.companySize || 'media_50_199',
-            estimated_revenue_tier: opp.estimatedRevenueTier || '15m_a_50m',
+            // `employee_count` fica NULL quando não informado: escrever 0 seria
+            // afirmar que a empresa não tem funcionários.
+            employee_count: opp.employeeCount ?? null,
+            // Mesma regra para a faixa de faturamento, e pela mesma razão: a
+            // coluna é nullable, e gravar `'15m_a_50m'` como padrão afirmaria
+            // uma faixa que ninguém informou. `??` em vez de `||` porque a
+            // coluna nunca recebe string vazia, e `||` trataria as duas como
+            // ausentes.
+            estimated_revenue_tier: opp.estimatedRevenueTier ?? null,
             lead_source: opp.leadSource || 'outbound',
             assigned_consultant_id: validUserId,
           })
@@ -497,7 +557,11 @@ export const crmService = {
               solution_service: opp.solutionService || 'Diagnóstico & Estruturação Comercial',
               probability: opp.probability || 10,
               estimated_value: opp.estimatedValue || 30000,
-              proposed_value: opp.proposedValue || opp.estimatedValue || 30000,
+              // `proposed_value` alimenta a coluna gerada `weighted_revenue`.
+              // Herdar a estimativa aqui inflaria o funil de previsão com um
+              // negócio fechado que não existe — a proposta só é preenchida
+              // quando o consultor realmente a faz (ver `updateStage`).
+              proposed_value: opp.proposedValue || 0,
               score: opp.score || 50,
               next_action_description: opp.nextActionDescription || 'Agendar contato',
               next_action_date: opp.nextActionDate || new Date().toISOString(),
@@ -534,12 +598,33 @@ export const crmService = {
                 has_unintegrated_systems: q.hasUnintegratedSystems,
                 uses_spreadsheets_manual: q.usesSpreadsheetsManual,
                 main_bottleneck: q.mainBottleneck,
+                // Estas três colunas existem no schema mas eram descartadas
+                // aqui: o custo estimado, o prazo desejado e o potencial
+                // acabavam perdidos mesmo já estando no formulário.
+                estimated_impact_cost: q.estimatedImpactCost ?? null,
                 has_budget: q.hasBudget,
                 urgency_level: q.urgencyLevel,
-                consultant_notes: q.consultantNotes,
+                desired_timeline: q.desiredTimeline ?? null,
+                opportunity_potential: q.opportunityPotential,
+                consultant_notes: q.consultantNotes ?? null,
               });
             }
 
+            // 6. Diagnóstico: NÃO é gravado aqui.
+            //
+            // Ele foi movido para a Server Action `saveDiagnostic`, e a
+            // mudança não é cosmética. Este insert saía pelo cliente de
+            // publishable key, então a ÚNICA barreira era a RLS — nenhuma
+            // camada de aplicação conferia nada — e o conteúdo gravado (preço,
+            // custo anual, nível de qualificação) vinha de um objeto montado no
+            // navegador. Editar o payload no devtools mudava o que era salvo.
+            //
+            // Lá o servidor recebe o FORMULÁRIO, recalcula com `toOpportunityPatch`
+            // e grava o resultado. Ver `src/app/actions/diagnostics.ts`.
+            //
+            // O que fica aqui é só a propagação do id real: o chamador precisa
+            // dele para mandar o formulário à action, e ele só existe depois do
+            // insert acima.
             return { success: true, data: { ...opp, id: oppData.id } };
           }
         }
@@ -736,7 +821,23 @@ export const crmService = {
     if (params.companyId) addDeletedLeadKey(params.companyId);
     oppIds.forEach((id) => addDeletedLeadKey(id));
 
+    // Reverte a blacklist do passo 1. A lista local e o banco têm que concordar:
+    // se a exclusão não aconteceu no servidor e a blacklist ficar, o lead some
+    // da tela e volta no próximo carregamento, com o usuário achando que foi
+    // apagado.
+    const reverterBlacklist = () => {
+      for (const chave of [cnpj, compName, tradeName, params.companyId ?? '', ...oppIds]) {
+        if (chave) removeDeletedLeadKey(chave);
+      }
+    };
+
     // 2. Chama rota de API segura do backend com supabaseAdmin
+    //
+    // Esta é a ÚNICA via de escrita quando há navegador. Todo caminho em que a
+    // rota não confirma a exclusão é um caminho em que NADA foi apagado no
+    // banco — e o passo 3, que viria a seguir, cai em `success: true`
+    // mentindo. Por isso o `!res.ok` abranger 401, 403, 500 e erro de rede,
+    // e não só o 401: a diferença entre eles é a mensagem, não o efeito.
     if (typeof window !== 'undefined') {
       try {
         const res = await fetch('/api/crm/leads', {
@@ -764,22 +865,49 @@ export const crmService = {
             return { success: true };
           }
         }
+
+        reverterBlacklist();
+
+        if (res.status === 401) {
+          return { success: false, error: 'Sessão expirada. Faça login novamente.' };
+        }
+        if (res.status === 403) {
+          return { success: false, error: 'Este lead não pertence à sua carteira.' };
+        }
+        return { success: false, error: 'Não foi possível excluir o lead. Tente novamente.' };
       } catch (apiErr) {
         console.warn('API /api/crm/leads falhou ou indisponível:', apiErr);
+        reverterBlacklist();
+        return { success: false, error: 'Não foi possível excluir o lead. Tente novamente.' };
       }
     }
 
-    // 3. Fallback client-side Supabase
+    // 3. Fallback client-side Supabase — só no servidor.
+    //
+    // No navegador este bloco nunca roda: acima, qualquer resultado da rota
+    // que não seja sucesso explícito já retornou. Ele existe para o SSR, onde
+    // não há `window` e não há fetch para a própria API.
+    //
+    // O resultado das queries é conferido. A versão anterior ignorava o
+    // retorno das duas: se a RLS recusasse, o código seguia como se tivesse
+    // deletado. Silêncio aqui é o mesmo bug do `admin.ts` cair na anon key.
     try {
       const validOppIds = oppIds.filter(isUUID);
       if (validOppIds.length > 0) {
-        await supabase.from('opportunities').delete().in('id', validOppIds);
+        const { error } = await supabase.from('opportunities').delete().in('id', validOppIds);
+        if (error) throw error;
       }
       if (params.companyId && isUUID(params.companyId)) {
-        await supabase.from('companies').delete().eq('id', params.companyId);
+        const { error } = await supabase
+          .from('companies')
+          .delete()
+          .eq('id', params.companyId);
+        if (error) throw error;
       }
     } catch (sbErr) {
       console.warn('Fallback Supabase client falhou:', sbErr);
+      reverterBlacklist();
+      return { success: false, error: 'Não foi possível excluir o lead. Tente novamente.' };
     }
 
     // 4. Fallback local

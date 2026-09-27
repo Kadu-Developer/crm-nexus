@@ -282,7 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           options: {
             data: {
               name: cleanEmail.split('@')[0],
-              role: ['carlos@nexusflowtech.com.br', 'diretoria@nexus.com.br', 'kaduesr@gmail.com'].includes(cleanEmail) ? 'admin_ceo' : 'consultant',
+              role: ['carlos@nexusflowtech.com.br', 'patrikrodrigues@nexusflowtech.com.br'].includes(cleanEmail) ? 'admin_tech'
+                : ['marcel@nexusflowtech.com.br', 'marcel@nexuxflowtech.com.br'].includes(cleanEmail) ? 'admin_ceo'
+                : 'consultant',
               must_change_password: false,
             },
           },
